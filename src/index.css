@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Construction Site Theme - Bold Industrial */
+    --background: 220 10% 8%;
+    --foreground: 45 100% 95%;
+
+    --card: 220 10% 12%;
+    --card-foreground: 45 100% 95%;
+
+    --popover: 220 10% 10%;
+    --popover-foreground: 45 100% 95%;
+
+    /* Safety Yellow - Primary Brand */
+    --primary: 48 95% 60%;
+    --primary-foreground: 220 10% 8%;
+
+    /* Charcoal Secondary */
+    --secondary: 220 10% 18%;
+    --secondary-foreground: 45 100% 90%;
+
+    --muted: 220 10% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    /* Orange Accent for warnings/actions */
+    --accent: 25 95% 55%;
+    --accent-foreground: 220 10% 8%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 45 100% 95%;
+
+    --border: 220 10% 25%;
+    --input: 220 10% 20%;
+    --ring: 48 95% 60%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --safety-yellow: 48 95% 60%;
+    --charcoal: 220 10% 15%;
+    --steel: 220 10% 40%;
+    --concrete: 220 10% 25%;
+    --warning-orange: 25 95% 55%;
+    --success-green: 145 70% 45%;
+
+    /* Site History category palette - categorical identity colors, kept
+       deliberately out of the yellow/green hue families (--primary/
+       --success-green) so a category badge never gets mistaken for a
+       status. Incidents/Defects intentionally reuse --destructive/
+       --accent instead of a slot here, since those categories genuinely
+       mean "something's wrong" - see CLAUDE.md for the full palette
+       validation notes (checked against the dark surface with the
+       dataviz skill's validator: lightness band, chroma floor, contrast,
+       and CVD pairwise separation). Always paired with an icon + text
+       label, never color-alone.
+    */
+    --cat-attendance: 188 70% 40%; /* cyan - People Present */
+    --cat-delivery: 212 68% 56%; /* sky - Materials Delivered */
+    --cat-usage: 238 62% 58%; /* blue - Materials Used */
+    --cat-diary: 262 55% 60%; /* violet - Site Activities */
+    --cat-toolbox: 290 48% 46%; /* purple - Toolbox Talks */
+    --cat-inspection: 322 58% 56%; /* magenta - Inspections */
+    --cat-photo: 201 55% 44%; /* slate blue - Photos */
+    --cat-tool: 345 55% 50%; /* rose - Tools & Equipment */
+    --cat-visitor: 170 60% 42%; /* teal - Visitors, added when visitor
+       sign-ins were surfaced in Site History - re-validated as a 9-slot
+       set (not the new color alone), landing on the same previously-
+       accepted worst adjacent pair (photo<->inspection, dE 7.0) rather
+       than introducing a new one */
+    --cat-petty-cash: 224 60% 52%; /* cobalt - Petty Cash, same
+       re-validate-the-whole-set process, same accepted worst pair */
+
+    /* Gradients */
+    --gradient-metal: linear-gradient(180deg, hsl(220 10% 18%) 0%, hsl(220 10% 12%) 100%);
+    --gradient-caution: repeating-linear-gradient(
+      45deg,
+      hsl(48 95% 60%),
+      hsl(48 95% 60%) 10px,
+      hsl(220 10% 8%) 10px,
+      hsl(220 10% 8%) 20px
+    );
+
+    /* Shadows */
+    --shadow-industrial: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 30px hsl(48 95% 60% / 0.3);
+    --shadow-inset: inset 0 2px 4px hsl(0 0% 0% / 0.3);
+
+    /* Sidebar */
+    --sidebar-background: 220 10% 10%;
+    --sidebar-foreground: 45 100% 90%;
+    --sidebar-primary: 48 95% 60%;
+    --sidebar-primary-foreground: 220 10% 8%;
+    --sidebar-accent: 220 10% 18%;
+    --sidebar-accent-foreground: 45 100% 90%;
+    --sidebar-border: 220 10% 25%;
+    --sidebar-ring: 48 95% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  /* Visible keyboard focus states on every interactive element */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .caution-stripe {
+    background: var(--gradient-caution);
+    height: 8px;
+  }
+
+  .card-industrial {
+    @apply bg-card rounded-xl border-2 border-border;
+    box-shadow: var(--shadow-industrial);
+  }
+
+  .btn-construction {
+    @apply font-bold uppercase tracking-wider;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.1em;
+  }
+
+  .glow-yellow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .metal-surface {
+    background: var(--gradient-metal);
+  }
+}
+
+@layer utilities {
+  .text-shadow-industrial {
+    text-shadow: 2px 2px 4px hsl(0 0% 0% / 0.5);
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}

@@ -1,0 +1,262 @@
+import { useRef, useState } from 'react';
+import Papa from 'papaparse';
+import { toast } from 'sonner';
+import { Upload, X, AlertTriangle, Loader2, FileUp } from 'lucide-react';
+import { useReplaceActivities, type UploadedActivity } from '@/hooks/useActivities';
+import { Button } from '@/components/ui/button';
+
+interface ScheduleUploadDialogProps {
+  siteId: string;
+  existingCount: number;
+  onClose: () => void;
+}
+
+// Header aliases are matched case-insensitively after stripping anything
+// that isn't a letter or space, so "Activity Code", "activity_code", and
+// "WBS Code" all resolve the same way - schedules exported from different
+// tools (Excel, MS Project, Primavera) rarely use identical column names.
+const FIELD_ALIASES: Record<keyof Omit<UploadedActivity, 'name'> | 'name', string[]> = {
+  name: ['name', 'activity name', 'task', 'task name', 'activity'],
+  activity_code: ['code', 'activity code', 'wbs', 'wbs code', 'id', 'item code', 'outline number', 'outline code'],
+  planned_start: ['start', 'start date', 'planned start', 'planned start date'],
+  planned_end: ['end', 'end date', 'finish', 'finish date', 'planned end', 'planned end date'],
+  responsible_party: ['responsible', 'responsible party', 'owner', 'assigned to'],
+};
+
+function normalizeHeader(header: string): string {
+  return header.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+}
+
+function matchColumn(headers: string[], aliases: string[]): string | null {
+  const normalized = headers.map((h) => [h, normalizeHeader(h)] as const);
+  for (const alias of aliases) {
+    const match = normalized.find(([, n]) => n === alias);
+    if (match) return match[0];
+  }
+  return null;
+}
+
+// Accepts ISO (YYYY-MM-DD) as-is; otherwise assumes DD/MM/YYYY (the common
+// convention on exported schedules in this market) before falling back to
+// the browser's own date parser. Returns undefined - not an error - for
+// anything it can't confidently parse, since a missing date shouldn't
+// block the whole row from importing.
+function parseDate(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const value = raw.trim();
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const dmy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    const [, d, m, y] = dmy;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return undefined;
+}
+
+// Mirrors the server-side prefix logic in replace_site_activities() - the
+// parent of "1.2.3" is "1.2". Used here only to preview indentation and
+// flag codes that won't find a matching parent row, not to compute the
+// actual parent_id (that happens server-side once real row ids exist).
+function parentCode(code: string): string | null {
+  const idx = code.lastIndexOf('.');
+  return idx === -1 ? null : code.slice(0, idx);
+}
+
+function codeDepth(code: string | undefined): number {
+  if (!code) return 0;
+  return (code.match(/\./g) || []).length;
+}
+
+export function ScheduleUploadDialog({ siteId, existingCount, onClose }: ScheduleUploadDialogProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceActivities = useReplaceActivities();
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsed, setParsed] = useState<UploadedActivity[]>([]);
+  const [skippedCount, setSkippedCount] = useState(0);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const handleFile = (file: File) => {
+    setFileName(file.name);
+    setParseError(null);
+    setParsed([]);
+
+    // Catch the wrong-file-type case up front with a specific, actionable
+    // message - parsing an .mpp/.xlsx file as text produces garbage rows
+    // with no recognizable headers, which used to surface as a confusing
+    // generic "no activity name column found" error even though the real
+    // problem was "this isn't a CSV at all."
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.csv')) {
+      const exportHint = lowerName.endsWith('.mpp')
+        ? 'In MS Project: File → Save As → choose "CSV (Comma delimited)" as the file type.'
+        : lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')
+          ? 'In Excel: File → Save As → choose "CSV (Comma delimited)" as the file type.'
+          : 'Export/save it as CSV first, then upload that file.';
+      setParseError(`"${file.name}" isn't a CSV file. ${exportHint}`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
+      const headers = result.meta.fields ?? [];
+
+      const nameCol = matchColumn(headers, FIELD_ALIASES.name);
+      if (!nameCol) {
+        setParseError('Could not find an activity name column (expected a header like "Name" or "Activity Name").');
+        setParsed([]);
+        return;
+      }
+      const codeCol = matchColumn(headers, FIELD_ALIASES.activity_code);
+      const startCol = matchColumn(headers, FIELD_ALIASES.planned_start);
+      const endCol = matchColumn(headers, FIELD_ALIASES.planned_end);
+      const responsibleCol = matchColumn(headers, FIELD_ALIASES.responsible_party);
+
+      let skipped = 0;
+      const rows: UploadedActivity[] = [];
+      for (const row of result.data) {
+        const name = row[nameCol]?.trim();
+        if (!name) {
+          skipped += 1;
+          continue;
+        }
+        rows.push({
+          name,
+          activity_code: codeCol ? row[codeCol]?.trim() || undefined : undefined,
+          planned_start: parseDate(startCol ? row[startCol] : undefined),
+          planned_end: parseDate(endCol ? row[endCol] : undefined),
+          responsible_party: responsibleCol ? row[responsibleCol]?.trim() || undefined : undefined,
+        });
+      }
+      setParsed(rows);
+      setSkippedCount(skipped);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirm = async () => {
+    try {
+      const count = await replaceActivities.mutateAsync({ site_id: siteId, activities: parsed });
+      toast.success('Schedule uploaded', { description: `${count} activities imported.` });
+      onClose();
+    } catch (err) {
+      toast.error('Could not upload schedule', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm animate-fade-in">
+      <div className="container max-w-lg mx-auto px-4 py-6 h-full overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-primary/20 rounded-xl">
+              <Upload className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="font-display text-3xl text-primary">UPLOAD SCHEDULE</h2>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-6 h-6" />
+          </Button>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-4">
+          Upload a CSV of your schedule of works. Export from Excel, Google Sheets, MS Project, or Primavera as CSV first if needed.
+          Expected columns: <span className="text-foreground">Activity Name</span> (required), Code, Start Date, End Date, Responsible.
+        </p>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex items-center gap-2 p-4 rounded-lg border border-dashed border-border hover:border-primary/50 transition-colors mb-4"
+        >
+          <FileUp className="w-5 h-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{fileName ?? 'Choose a CSV file'}</span>
+        </button>
+
+        {parseError && (
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
+            <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
+            <p className="text-xs text-destructive">{parseError}</p>
+          </div>
+        )}
+
+        {parsed.length > 0 && (
+          <div className="space-y-3">
+            {existingCount > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
+                <p className="text-xs text-warning">
+                  This replaces all {existingCount} existing activities on this site, including any progress already recorded.
+                </p>
+              </div>
+            )}
+            <p className="text-sm text-foreground">
+              {parsed.length} activit{parsed.length === 1 ? 'y' : 'ies'} ready to import
+              {skippedCount > 0 && `, ${skippedCount} row(s) skipped (no name)`}.
+            </p>
+            <div className="border border-border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              {(() => {
+                const codes = new Set(parsed.map((r) => r.activity_code).filter(Boolean) as string[]);
+                return parsed.map((row, i) => {
+                  const depth = codeDepth(row.activity_code);
+                  const pCode = row.activity_code ? parentCode(row.activity_code) : null;
+                  const orphaned = !!pCode && !codes.has(pCode);
+                  return (
+                    <div
+                      key={i}
+                      className="p-2.5 text-xs border-b border-border last:border-b-0 bg-card"
+                      style={{ paddingLeft: `${10 + depth * 16}px` }}
+                    >
+                      <p className="text-foreground font-medium">
+                        {row.activity_code && <span className="text-muted-foreground mr-1">{row.activity_code}</span>}
+                        {row.name}
+                        {orphaned && <span className="ml-2 text-warning">(no matching parent code — will import top-level)</span>}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {row.planned_start ?? '—'} → {row.planned_end ?? '—'}
+                        {row.responsible_party && ` · ${row.responsible_party}`}
+                      </p>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <Button
+              variant="construction"
+              size="touch"
+              className="w-full"
+              onClick={handleConfirm}
+              disabled={replaceActivities.isPending}
+            >
+              {replaceActivities.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Uploading...
+                </>
+              ) : (
+                `REPLACE SCHEDULE WITH ${parsed.length} ACTIVITIES`
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

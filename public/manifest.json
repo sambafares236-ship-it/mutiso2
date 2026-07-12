@@ -1,0 +1,18 @@
+{
+  "name": "Mutiso.AI",
+  "short_name": "Mutiso",
+  "description": "Construction site management for foremen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141619",
+  "theme_color": "#F4D03F",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
