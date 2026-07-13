@@ -441,6 +441,7 @@ export type Database = {
       }
       defect_log: {
         Row: {
+          activity_id: string | null
           created_at: string
           description: string
           fixed_at: string | null
@@ -457,6 +458,7 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          activity_id?: string | null
           created_at?: string
           description: string
           fixed_at?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          activity_id?: string | null
           created_at?: string
           description?: string
           fixed_at?: string | null
@@ -489,6 +492,13 @@ export type Database = {
           verified_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "defect_log_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activity"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "defect_log_site_id_fkey"
             columns: ["site_id"]
@@ -853,6 +863,24 @@ export type Database = {
           },
         ]
       }
+      n8n_chat_histories: {
+        Row: {
+          id: number
+          message: Json
+          session_id: string
+        }
+        Insert: {
+          id?: number
+          message: Json
+          session_id: string
+        }
+        Update: {
+          id?: number
+          message?: Json
+          session_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1087,6 +1115,7 @@ export type Database = {
           email_address: string | null
           full_name: string | null
           id: string
+          phone_number: string | null
           updated_at: string
         }
         Insert: {
@@ -1094,6 +1123,7 @@ export type Database = {
           email_address?: string | null
           full_name?: string | null
           id: string
+          phone_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -1101,6 +1131,7 @@ export type Database = {
           email_address?: string | null
           full_name?: string | null
           id?: string
+          phone_number?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1600,6 +1631,56 @@ export type Database = {
           },
         ]
       }
+      subscription_payment: {
+        Row: {
+          amount: number
+          checkout_request_id: string
+          completed_at: string | null
+          id: string
+          initiated_at: string
+          initiated_by: string | null
+          merchant_request_id: string | null
+          mpesa_receipt_number: string | null
+          phone_number: string
+          site_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          checkout_request_id: string
+          completed_at?: string | null
+          id?: string
+          initiated_at?: string
+          initiated_by?: string | null
+          merchant_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          phone_number: string
+          site_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          checkout_request_id?: string
+          completed_at?: string | null
+          id?: string
+          initiated_at?: string
+          initiated_by?: string | null
+          merchant_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          phone_number?: string
+          site_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payment_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tool_checkout_log: {
         Row: {
           checked_out_at: string
@@ -1988,6 +2069,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          milestone_id: string | null
           permit_type: string
           requested_by: string
           site_id: string
@@ -2000,6 +2082,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          milestone_id?: string | null
           permit_type: string
           requested_by: string
           site_id: string
@@ -2012,6 +2095,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          milestone_id?: string | null
           permit_type?: string
           requested_by?: string
           site_id?: string
@@ -2020,6 +2104,13 @@ export type Database = {
           valid_to?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "work_permit_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "site_milestone"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_permit_site_id_fkey"
             columns: ["site_id"]
@@ -2075,6 +2166,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bot_query_site_data: {
+        Args: {
+          p_date_range_days?: number
+          p_query_type: string
+          p_site_id: string
+        }
+        Returns: Json
+      }
       can_access_activity: {
         Args: { _activity_id: string; _user_id: string }
         Returns: boolean
@@ -2102,6 +2201,14 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      complete_subscription_payment: {
+        Args: {
+          p_checkout_request_id: string
+          p_mpesa_receipt_number?: string
+          p_status: string
+        }
+        Returns: undefined
       }
       consume_invite: { Args: { p_token: string }; Returns: string }
       create_toolbox_talk: {
@@ -2176,6 +2283,10 @@ export type Database = {
       owns_site: {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
+      }
+      recompute_milestone_auto_status: {
+        Args: { p_milestone_id: string }
+        Returns: undefined
       }
       replace_site_activities: {
         Args: { p_activities: Json; p_site_id: string }

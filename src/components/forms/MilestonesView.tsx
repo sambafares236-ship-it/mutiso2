@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Flag, X, CheckCircle2, Circle, PlayCircle, Sparkles } from 'lucide-react';
-import { useSiteMilestones, useUpdateMilestoneStatus } from '@/hooks/useMilestones';
+import { Flag, X, CheckCircle2, Circle, PlayCircle, Sparkles, Plus, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { useSiteMilestones, useUpdateMilestoneStatus, useCreateMilestone, useDeleteMilestone } from '@/hooks/useMilestones';
 import { useSiteActivities } from '@/hooks/useActivities';
+import { useSitePermits, PERMIT_TYPE_LABELS } from '@/hooks/usePermits';
+import { useSiteDefects } from '@/hooks/useDefects';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MilestonesViewProps {
@@ -11,22 +16,48 @@ interface MilestonesViewProps {
 }
 
 export function MilestonesView({ siteId, onClose }: MilestonesViewProps) {
+  const { isContractor } = useAuth();
   const { data: milestones, isLoading } = useSiteMilestones(siteId);
   const { data: activities } = useSiteActivities(siteId);
+  const { data: permits } = useSitePermits(siteId);
+  const { data: defects } = useSiteDefects(siteId);
   const updateStatus = useUpdateMilestoneStatus();
+  const createMilestone = useCreateMilestone();
+  const deleteMilestone = useDeleteMilestone();
+  const [newMilestoneName, setNewMilestoneName] = useState('');
 
   // "Ready to sign off" is a nudge, not an automatic status change - a
   // milestone completing sets signed_off_at/inspected_by (a real
   // compliance record via enforce_milestone_sequence), so it should only
-  // ever happen from someone actually clicking Sign Off, never silently
-  // because every linked activity happened to reach 100%.
+  // ever happen from someone actually clicking Sign Off. Folds in two
+  // rule-based signals from foreman field data (approved permits, open
+  // defects) alongside the existing linked-activity progress - all three
+  // are advisory only, none of them write anything on their own.
+  const activityMilestone = new Map<string, string>(); // activity id -> milestone id
   const readiness = new Map<string, { total: number; done: number }>();
   for (const activity of activities ?? []) {
     if (!activity.milestone_id) continue;
+    activityMilestone.set(activity.id, activity.milestone_id);
     const entry = readiness.get(activity.milestone_id) ?? { total: 0, done: 0 };
     entry.total += 1;
     if (activity.percent_complete >= 100) entry.done += 1;
     readiness.set(activity.milestone_id, entry);
+  }
+
+  const approvedPermitsByMilestone = new Map<string, typeof permits>();
+  for (const permit of permits ?? []) {
+    if (!permit.milestone_id || permit.status !== 'approved') continue;
+    const list = approvedPermitsByMilestone.get(permit.milestone_id) ?? [];
+    list.push(permit);
+    approvedPermitsByMilestone.set(permit.milestone_id, list);
+  }
+
+  const openDefectCountByMilestone = new Map<string, number>();
+  for (const defect of defects ?? []) {
+    if (!defect.activity_id || defect.status === 'resolved') continue;
+    const milestoneId = activityMilestone.get(defect.activity_id);
+    if (!milestoneId) continue;
+    openDefectCountByMilestone.set(milestoneId, (openDefectCountByMilestone.get(milestoneId) ?? 0) + 1);
   }
 
   const handleUpdate = async (milestoneId: string, status: 'in_progress' | 'completed', name: string) => {
@@ -37,6 +68,29 @@ export function MilestonesView({ siteId, onClose }: MilestonesViewProps) {
       // The sequence gate (enforce_milestone_sequence trigger) rejects
       // out-of-order transitions with a Postgres exception, surfaced here.
       toast.error('Cannot update milestone', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  const handleAddMilestone = async () => {
+    const name = newMilestoneName.trim();
+    if (!name) return;
+    const nextSequence = Math.max(0, ...(milestones ?? []).map((m) => m.sequence)) + 1;
+    try {
+      await createMilestone.mutateAsync({ site_id: siteId, name, sequence: nextSequence });
+      toast.success(`${name} added`);
+      setNewMilestoneName('');
+    } catch (err) {
+      toast.error('Could not add milestone', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  const handleDeleteMilestone = async (milestoneId: string, name: string) => {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteMilestone.mutateAsync({ id: milestoneId, site_id: siteId });
+      toast.success(`${name} deleted`);
+    } catch (err) {
+      toast.error('Could not delete milestone', { description: err instanceof Error ? err.message : undefined });
     }
   };
 
@@ -67,7 +121,10 @@ export function MilestonesView({ siteId, onClose }: MilestonesViewProps) {
               const isCompleted = milestone.status === 'completed';
               const isInProgress = milestone.status === 'in_progress';
               const r = readiness.get(milestone.id);
-              const readyToSignOff = !!r && r.total > 0 && r.done === r.total && !isCompleted;
+              const approvedPermits = approvedPermitsByMilestone.get(milestone.id) ?? [];
+              const openDefectCount = openDefectCountByMilestone.get(milestone.id) ?? 0;
+              const activitiesReady = !!r && r.total > 0 && r.done === r.total;
+              const readyToSignOff = activitiesReady && openDefectCount === 0 && !isCompleted;
               return (
                 <div
                   key={milestone.id}
@@ -82,12 +139,24 @@ export function MilestonesView({ siteId, onClose }: MilestonesViewProps) {
                   ) : (
                     <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
                   )}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground">{milestone.name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{milestone.status.replace('_', ' ')}</p>
                     {r && r.total > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {r.done}/{r.total} linked activities complete
+                      </p>
+                    )}
+                    {approvedPermits.map((permit) => (
+                      <p key={permit.id} className="flex items-center gap-1 text-xs text-success mt-0.5">
+                        <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                        {PERMIT_TYPE_LABELS[permit.permit_type] ?? permit.permit_type} permit approved
+                      </p>
+                    ))}
+                    {openDefectCount > 0 && (
+                      <p className="flex items-center gap-1 text-xs text-warning mt-0.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {openDefectCount} open defect{openDefectCount > 1 ? 's' : ''} linked
                       </p>
                     )}
                     {readyToSignOff && (
@@ -116,9 +185,45 @@ export function MilestonesView({ siteId, onClose }: MilestonesViewProps) {
                       Sign Off
                     </Button>
                   )}
+                  {isContractor && milestone.status === 'pending' && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteMilestone(milestone.id, milestone.name)}
+                      disabled={deleteMilestone.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               );
             })}
+
+            {isContractor && (
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  placeholder="Add a custom milestone stage..."
+                  value={newMilestoneName}
+                  onChange={(e) => setNewMilestoneName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddMilestone();
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="flex-shrink-0"
+                  onClick={handleAddMilestone}
+                  disabled={createMilestone.isPending || !newMilestoneName.trim()}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

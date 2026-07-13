@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // undefined first so .optional() applies to "field left blank."
 const blankToUndefined = (v: unknown) => (v === '' || v === undefined ? undefined : v);
 
-const schema = z.object({
+export const schema = z.object({
   contract_type: z.string().optional(),
   contract_value: z.preprocess(blankToUndefined, z.coerce.number().optional()),
   currency: z.string().optional(),

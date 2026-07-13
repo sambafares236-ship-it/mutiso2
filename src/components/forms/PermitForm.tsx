@@ -4,14 +4,18 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { FileCheck, X, Loader2 } from 'lucide-react';
 import { useRequestPermit } from '@/hooks/usePermits';
+import { useSiteMilestones } from '@/hooks/useMilestones';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const NO_MILESTONE = '__none__';
+
 const schema = z.object({
   permit_type: z.string().min(1),
   description: z.string().optional(),
+  milestone_id: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -29,16 +33,24 @@ const PERMIT_TYPES = [
 
 export function PermitForm({ siteId, onClose }: PermitFormProps) {
   const requestPermit = useRequestPermit();
+  const { data: milestones } = useSiteMilestones(siteId);
   const {
     control,
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { permit_type: 'hot_work' } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { permit_type: 'hot_work', milestone_id: NO_MILESTONE },
+  });
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const result = await requestPermit.mutateAsync({ site_id: siteId, ...values });
+      const result = await requestPermit.mutateAsync({
+        site_id: siteId,
+        ...values,
+        milestone_id: values.milestone_id === NO_MILESTONE ? undefined : values.milestone_id,
+      });
       if (result.queued) {
         toast.info('Saved offline', { description: 'Permit request will sync once online.' });
       } else {
@@ -91,6 +103,31 @@ export function PermitForm({ siteId, onClose }: PermitFormProps) {
               )}
             />
           </div>
+
+          {!!milestones?.length && (
+            <div className="space-y-2">
+              <Label htmlFor="milestone_id">Which milestone is this for? (optional)</Label>
+              <Controller
+                name="milestone_id"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="milestone_id">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_MILESTONE}>Not linked to a milestone</SelectItem>
+                      {milestones.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Details</Label>

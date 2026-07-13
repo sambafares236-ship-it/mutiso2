@@ -37,20 +37,28 @@ interface CertificationsViewProps {
   readOnly?: boolean;
 }
 
-function CertificationForm({
+export function CertificationForm({
   siteId,
   existing,
+  presetToolId,
   onClose,
 }: {
   siteId: string;
   existing?: Certification;
+  // Pre-scopes a new certification to one piece of equipment (e.g. opened
+  // from that equipment's own card in HeavyEquipmentView) rather than
+  // starting from the generic "applies to" picker - only used when
+  // `existing` isn't set, since editing already knows its subject.
+  presetToolId?: string;
   onClose: () => void;
 }) {
   const addCert = useAddCertification();
   const updateCert = useUpdateCertification();
   const { data: workers } = useWorkers(siteId);
   const { data: tools } = useSiteTools(siteId);
-  const [subjectType, setSubjectType] = useState<'worker' | 'equipment'>(existing?.subject_type as 'worker' | 'equipment' ?? 'worker');
+  const [subjectType, setSubjectType] = useState<'worker' | 'equipment'>(
+    (existing?.subject_type as 'worker' | 'equipment') ?? (presetToolId ? 'equipment' : 'worker'),
+  );
   const {
     register,
     handleSubmit,
@@ -69,7 +77,9 @@ function CertificationForm({
           issued_date: existing.issued_date ?? undefined,
           expiry_date: existing.expiry_date,
         }
-      : { subject_type: 'worker' },
+      : presetToolId
+        ? { subject_type: 'equipment', tool_id: presetToolId }
+        : { subject_type: 'worker' },
   });
 
   const onSubmit = async (values: FormValues) => {

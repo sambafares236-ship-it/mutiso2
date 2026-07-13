@@ -23,7 +23,7 @@ async function runOperation(op: NewQueuedOperation) {
   }
 }
 
-function isNetworkFailure(err: unknown): boolean {
+export function isNetworkFailure(err: unknown): boolean {
   return err instanceof TypeError || !navigator.onLine;
 }
 

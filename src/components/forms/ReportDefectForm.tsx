@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Wrench, X, Loader2, ImagePlus } from 'lucide-react';
 import { useReportDefect } from '@/hooks/useDefects';
+import { useSiteActivities } from '@/hooks/useActivities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const NO_ACTIVITY = '__none__';
+
 const schema = z.object({
   location: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
   severity: z.string().min(1),
+  activity_id: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -26,6 +30,7 @@ interface ReportDefectFormProps {
 
 export function ReportDefectForm({ siteId, onClose }: ReportDefectFormProps) {
   const reportDefect = useReportDefect();
+  const { data: activities } = useSiteActivities(siteId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const {
@@ -33,7 +38,10 @@ export function ReportDefectForm({ siteId, onClose }: ReportDefectFormProps) {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { severity: 'medium' } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { severity: 'medium', activity_id: NO_ACTIVITY },
+  });
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -53,7 +61,12 @@ export function ReportDefectForm({ siteId, onClose }: ReportDefectFormProps) {
         }
       }
 
-      const result = await reportDefect.mutateAsync({ site_id: siteId, ...values, photo_url: photoUrl });
+      const result = await reportDefect.mutateAsync({
+        site_id: siteId,
+        ...values,
+        photo_url: photoUrl,
+        activity_id: values.activity_id === NO_ACTIVITY ? undefined : values.activity_id,
+      });
       if (result.queued) {
         toast.info('Saved offline', { description: 'Defect report will sync once online.' });
       } else {
@@ -105,6 +118,32 @@ export function ReportDefectForm({ siteId, onClose }: ReportDefectFormProps) {
               )}
             />
           </div>
+
+          {!!activities?.length && (
+            <div className="space-y-2">
+              <Label htmlFor="activity_id">Which activity? (optional)</Label>
+              <Controller
+                name="activity_id"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="activity_id">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_ACTIVITY}>Not linked to a specific activity</SelectItem>
+                      {activities.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.activity_code ? `${a.activity_code} ` : ''}
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>

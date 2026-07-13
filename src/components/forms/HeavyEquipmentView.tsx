@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Truck, X, Plus, History, Gauge, TrendingUp, Wrench } from 'lucide-react';
+import { Truck, X, Plus, History, Gauge, TrendingUp, Wrench, ShieldCheck, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import {
   useSiteTools,
   useAddTool,
@@ -15,6 +15,7 @@ import {
 import { useWorkers } from '@/hooks/useWorkers';
 import { useTodayAttendance } from '@/hooks/useAttendance';
 import { useAuth } from '@/hooks/useAuth';
+import { useSiteCertifications, useDeleteCertification, isExpiringSoon, type Certification } from '@/hooks/useCertifications';
 import { formatKES } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MaintenanceSection } from './ToolsView';
+import { CertificationForm } from './CertificationsView';
 
 interface HeavyEquipmentViewProps {
   siteId: string;
@@ -269,6 +271,92 @@ function EfficiencyStats({
   );
 }
 
+// Certifications filtered client-side from the site's full certification
+// list (same "compute, don't store" pattern used elsewhere) rather than a
+// per-tool query - a site's certification list is small and already
+// fetched once by useSiteCertifications.
+function EquipmentCertifications({
+  toolId,
+  certs,
+  isContractor,
+  onAdd,
+  onEdit,
+}: {
+  toolId: string;
+  certs: Certification[];
+  isContractor: boolean;
+  onAdd: () => void;
+  onEdit: (cert: Certification) => void;
+}) {
+  const deleteCert = useDeleteCertification();
+  const toolCerts = certs.filter((c) => c.tool_id === toolId);
+
+  const handleDelete = async (cert: Certification) => {
+    if (!window.confirm(`Delete "${cert.cert_name}"? This cannot be undone.`)) return;
+    try {
+      await deleteCert.mutateAsync({ id: cert.id, site_id: cert.site_id });
+      toast.success('Certification deleted');
+    } catch (err) {
+      toast.error('Error', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wide">
+          <ShieldCheck className="w-3 h-3" /> Certifications
+        </p>
+        {isContractor && (
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onAdd}>
+            <Plus className="w-3 h-3 mr-1" /> Add
+          </Button>
+        )}
+      </div>
+      {!toolCerts.length ? (
+        <p className="text-xs text-muted-foreground">No certifications tracked for this item.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {toolCerts.map((cert) => {
+            const expiring = isExpiringSoon(cert.expiry_date);
+            return (
+              <div
+                key={cert.id}
+                className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 ${expiring ? 'bg-destructive/10' : 'bg-secondary/60'}`}
+              >
+                <div className="min-w-0">
+                  <p className="text-xs text-foreground truncate">{cert.cert_name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Expires {cert.expiry_date}
+                    {cert.cert_number ? ` · #${cert.cert_number}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {expiring && (
+                    <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive">
+                      <AlertTriangle className="w-3 h-3" /> Expiring
+                    </span>
+                  )}
+                  {isContractor && (
+                    <>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(cert)}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(cert)}>
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EquipmentHistory({ toolId, siteId }: { toolId: string; siteId: string }) {
   const { data: history, isLoading } = useToolCheckoutHistory(toolId);
 
@@ -307,8 +395,11 @@ export function HeavyEquipmentView({ siteId, onClose }: HeavyEquipmentViewProps)
   const { data: allTools, isLoading } = useSiteTools(siteId);
   const equipment = allTools?.filter((t) => t.category === 'plant');
   const { data: efficiency } = useEquipmentEfficiency(siteId);
+  const { data: certs } = useSiteCertifications(siteId);
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [certFormToolId, setCertFormToolId] = useState<string | null>(null);
+  const [editingCert, setEditingCert] = useState<Certification | null>(null);
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in">
@@ -375,6 +466,14 @@ export function HeavyEquipmentView({ siteId, onClose }: HeavyEquipmentViewProps)
                     <History className="w-3 h-3" /> {expandedId === tool.id ? 'Hide' : 'View'} history & maintenance
                   </button>
                   {expandedId === tool.id && <EquipmentHistory toolId={tool.id} siteId={siteId} />}
+
+                  <EquipmentCertifications
+                    toolId={tool.id}
+                    certs={certs ?? []}
+                    isContractor={isContractor}
+                    onAdd={() => setCertFormToolId(tool.id)}
+                    onEdit={setEditingCert}
+                  />
                 </div>
               );
             })}
@@ -383,6 +482,10 @@ export function HeavyEquipmentView({ siteId, onClose }: HeavyEquipmentViewProps)
       </div>
 
       {showAddForm && <AddEquipmentForm siteId={siteId} onClose={() => setShowAddForm(false)} />}
+      {certFormToolId && (
+        <CertificationForm siteId={siteId} presetToolId={certFormToolId} onClose={() => setCertFormToolId(null)} />
+      )}
+      {editingCert && <CertificationForm siteId={siteId} existing={editingCert} onClose={() => setEditingCert(null)} />}
     </div>
   );
 }

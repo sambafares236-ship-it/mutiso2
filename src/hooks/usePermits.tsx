@@ -45,6 +45,7 @@ export function useRequestPermit() {
       description?: string;
       valid_from?: string;
       valid_to?: string;
+      milestone_id?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
       return submitOrQueue({

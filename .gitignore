@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.*
 .db_password.txt
+.db_password_prod.txt
 supabase/.temp
 
 # Nested clone of the deployment remote - not part of this project's own
@@ -32,3 +33,4 @@ supabase/.temp
 *.njsproj
 *.sln
 *.sw?
+.e2e-scratch/

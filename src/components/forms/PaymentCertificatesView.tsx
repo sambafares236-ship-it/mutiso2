@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const schema = z.object({
+export const schema = z.object({
   period_start: z.string().min(1),
   period_end: z.string().min(1),
   work_completed_value: z.coerce.number().positive('Value must be greater than 0'),

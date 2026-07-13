@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import ForemanDashboard from './ForemanDashboard';
 import { ProjectOverviewView } from '@/components/forms/ProjectOverviewView';
+import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog';
 
 const createSiteSchema = z.object({
   site_name: z.string().min(1, 'Site name is required'),
@@ -171,6 +172,7 @@ function ContractorView() {
   const { data: sites, isLoading } = useAdminSites();
   const createSite = useCreateSite();
   const [overviewSite, setOverviewSite] = useState<{ id: string; site_name: string } | null>(null);
+  const [paySite, setPaySite] = useState<{ id: string; site_name: string; monthly_rate: number } | null>(null);
   const {
     register,
     handleSubmit,
@@ -226,9 +228,22 @@ function ContractorView() {
                 </span>
               </div>
               {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
+              {site.subscription_end && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Subscription {new Date(site.subscription_end) < new Date() ? 'expired' : 'active until'}{' '}
+                  {new Date(site.subscription_end).toLocaleDateString('en-KE')}
+                </p>
+              )}
               <div className="flex gap-2 mt-3">
                 <Button size="sm" variant="outline" onClick={() => setOverviewSite({ id: site.id, site_name: site.site_name })}>
                   <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
+                </Button>
+                <Button
+                  size="sm"
+                  variant="construction"
+                  onClick={() => setPaySite({ id: site.id, site_name: site.site_name, monthly_rate: site.monthly_rate })}
+                >
+                  <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
                 </Button>
               </div>
               <InviteRow siteId={site.id} siteName={site.site_name} />
@@ -240,6 +255,16 @@ function ContractorView() {
 
       {overviewSite && (
         <ProjectOverviewView siteId={overviewSite.id} siteName={overviewSite.site_name} onClose={() => setOverviewSite(null)} />
+      )}
+
+      {paySite && (
+        <PaySubscriptionDialog
+          siteId={paySite.id}
+          siteName={paySite.site_name}
+          monthlyRate={paySite.monthly_rate}
+          open={!!paySite}
+          onClose={() => setPaySite(null)}
+        />
       )}
     </div>
   );

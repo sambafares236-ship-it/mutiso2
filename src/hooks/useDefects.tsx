@@ -29,7 +29,14 @@ export function useReportDefect() {
 
   return useMutation({
     networkMode: 'always',
-    mutationFn: async (defect: { site_id: string; location?: string; description: string; severity: string; photo_url?: string }) => {
+    mutationFn: async (defect: {
+      site_id: string;
+      location?: string;
+      description: string;
+      severity: string;
+      photo_url?: string;
+      activity_id?: string;
+    }) => {
       if (!user) throw new Error('Not authenticated');
       return submitOrQueue({
         kind: 'insert',

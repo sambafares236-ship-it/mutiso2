@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { HardHat, Loader2 } from 'lucide-react';
 
 type Mode = 'signup' | 'signin';
@@ -17,6 +18,7 @@ const schema = z.object({
   full_name: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  agreed_to_terms: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -30,6 +32,7 @@ export default function Auth() {
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -44,6 +47,10 @@ export default function Auth() {
       if (mode === 'signup') {
         if (!values.full_name) {
           setError('full_name', { message: 'Full name is required' });
+          return;
+        }
+        if (!values.agreed_to_terms) {
+          setError('agreed_to_terms', { message: 'You must agree to the Terms and Privacy Policy' });
           return;
         }
         const { error } = await supabase.auth.signUp({
@@ -123,6 +130,37 @@ export default function Auth() {
             <Input id="password" type="password" {...register('password')} />
             {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           </div>
+
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <div className="flex items-start gap-2">
+                <Controller
+                  name="agreed_to_terms"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="agreed_to_terms"
+                      checked={field.value ?? false}
+                      onCheckedChange={field.onChange}
+                      className="mt-0.5"
+                    />
+                  )}
+                />
+                <Label htmlFor="agreed_to_terms" className="text-xs font-normal text-muted-foreground leading-snug">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noreferrer" className="text-primary underline">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="/privacy" target="_blank" rel="noreferrer" className="text-primary underline">
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
+              </div>
+              {errors.agreed_to_terms && <p className="text-xs text-destructive">{errors.agreed_to_terms.message}</p>}
+            </div>
+          )}
 
           <Button type="submit" variant="construction" size="touch" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (

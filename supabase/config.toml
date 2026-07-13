@@ -391,6 +391,17 @@ deno_version = 2
 # can trigger an invite email, matching the RLS on the invites table itself.
 verify_jwt = true
 
+[functions.mpesa-stk-push]
+# Requires a signed-in user - the function itself further checks that the
+# caller actually owns/can act on the site being paid for via RLS.
+verify_jwt = true
+
+[functions.mpesa-stk-callback]
+# Safaricom calls this directly with no Supabase session at all - there is
+# no JWT to verify. See the function's own header comment for how it
+# protects itself instead.
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

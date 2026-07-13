@@ -8,11 +8,14 @@
     "build": "tsc -b && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tailwindcss/typography": "^0.5.20",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.2",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.3.31",
@@ -23,15 +26,18 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^15.15.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.16",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.62.1",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@radix-ui/react-checkbox": "^1.3.7",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-label": "^2.1.11",
     "@radix-ui/react-popover": "^1.1.19",
