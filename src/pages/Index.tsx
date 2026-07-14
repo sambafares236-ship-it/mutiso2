@@ -94,11 +94,25 @@ function InviteRow({ siteId, siteName }: { siteId: string; siteName: string }) {
   return (
     <div className="mt-3 space-y-2">
       {invites?.map((invite) => (
-        <div key={invite.id} className="flex items-center justify-between gap-2 bg-secondary rounded-lg px-3 py-2">
-          <span className="text-xs text-muted-foreground truncate">{invite.email}</span>
-          <button onClick={() => copyLink(invite.token)} className="text-muted-foreground hover:text-primary shrink-0">
-            {copied === invite.token ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+        <div key={invite.id} className="bg-secondary rounded-lg px-3 py-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground truncate">{invite.email}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">
+              Expires {new Date(invite.expires_at).toLocaleDateString('en-KE')}
+            </span>
+          </div>
+          <button
+            onClick={() => copyLink(invite.token)}
+            className="w-full flex items-center justify-between gap-2 text-xs text-primary hover:text-primary/80 bg-background/50 rounded px-2 py-1.5"
+          >
+            <span className="truncate font-mono">{`${window.location.origin}/join?token=${invite.token}`}</span>
+            {copied === invite.token ? (
+              <Check className="w-4 h-4 text-success shrink-0" />
+            ) : (
+              <Copy className="w-4 h-4 shrink-0" />
+            )}
           </button>
+          {copied === invite.token && <p className="text-[10px] text-success">Link copied!</p>}
         </div>
       ))}
 
