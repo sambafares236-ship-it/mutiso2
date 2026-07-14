@@ -142,7 +142,10 @@ const CATEGORIES: CategoryConfig[] = [
 // need it. Matches the tier RLS gate (owns_pro_site/is_assigned_foreman_of_
 // pro_site) added in the same change - hiding these here is a UX nicety,
 // the database is what actually enforces it.
-const PRO_ONLY_TILE_KEYS: FormType[] = ['tools', 'payroll', 'defects'];
+// Payroll (and Petty Cash, never listed here) are core money management -
+// stays base-tier per explicit user decision, even though most other
+// financial features (Budget, Payment Certs, Subcontractors) are Pro-only.
+const PRO_ONLY_TILE_KEYS: FormType[] = ['tools', 'defects'];
 const PRO_ONLY_CATEGORY_KEYS = ['heavyEquipment', 'assets', 'environmental'];
 
 function getTierFilteredCategories(isPro: boolean): CategoryConfig[] {

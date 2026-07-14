@@ -444,62 +444,66 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
           )}
 
           <SectionCard icon={Wallet} title="Finance Summary">
-            {isPro && (
-              financeLoading ? (
-                <Skeleton className="h-24 w-full rounded-lg" />
-              ) : (
-                <div className="space-y-2 text-sm">
+            {/* Money management (Budget, Actual costs, Payroll, Variance) is
+                base-tier - only Contract value and Latest payment cert stay
+                Pro-only, matching site_contract/payment_certificate's own
+                RLS gate. */}
+            {financeLoading ? (
+              <Skeleton className="h-24 w-full rounded-lg" />
+            ) : (
+              <div className="space-y-2 text-sm">
+                {isPro && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Contract value</span>
                     <span className="font-medium text-foreground">{formatKES(finance?.contractValue, finance?.currency)}</span>
                   </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Budget</span>
+                  <span className="font-medium text-foreground">{formatKES(finance?.budgetTotal, finance?.currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Actual to date (labor + other)</span>
+                  <span className="font-medium text-foreground">{formatKES(finance?.actualTotal, finance?.currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Today's payroll</span>
+                  <span className="font-medium text-destructive">{formatKES(payroll?.todayTotal)}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-muted-foreground">This week's payroll</span>
+                  <span className="text-right">
+                    <span className={`font-medium block ${weekPending ? 'text-destructive' : 'text-foreground'}`}>
+                      {formatKES(payroll?.weekTotal)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {payroll?.weekConfirmed
+                        ? `Paid ${formatKES(payroll.weekPaid)} · Pending ${formatKES(payroll.weekPending)}`
+                        : 'Estimated - not yet generated'}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total payroll (paid to date)</span>
+                  <span className="font-medium text-success">{formatKES(payroll?.totalPaidAllTime)}</span>
+                </div>
+                {finance?.variance !== null && finance?.variance !== undefined && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Budget</span>
-                    <span className="font-medium text-foreground">{formatKES(finance?.budgetTotal, finance?.currency)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Actual to date (labor + other)</span>
-                    <span className="font-medium text-foreground">{formatKES(finance?.actualTotal, finance?.currency)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Today's payroll</span>
-                    <span className="font-medium text-destructive">{formatKES(payroll?.todayTotal)}</span>
-                  </div>
-                  <div className="flex justify-between items-start">
-                    <span className="text-muted-foreground">This week's payroll</span>
-                    <span className="text-right">
-                      <span className={`font-medium block ${weekPending ? 'text-destructive' : 'text-foreground'}`}>
-                        {formatKES(payroll?.weekTotal)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {payroll?.weekConfirmed
-                          ? `Paid ${formatKES(payroll.weekPaid)} · Pending ${formatKES(payroll.weekPending)}`
-                          : 'Estimated - not yet generated'}
-                      </span>
+                    <span className="text-muted-foreground">Variance</span>
+                    <span className={`font-medium ${finance.variance < 0 ? 'text-destructive' : 'text-success'}`}>
+                      {formatKES(finance.variance, finance.currency)}
                     </span>
                   </div>
+                )}
+                {isPro && finance?.latestCertificate && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total payroll (paid to date)</span>
-                    <span className="font-medium text-success">{formatKES(payroll?.totalPaidAllTime)}</span>
+                    <span className="text-muted-foreground">Latest payment cert</span>
+                    <span className="font-medium text-foreground capitalize">
+                      #{finance.latestCertificate.certificate_number} · {finance.latestCertificate.status}
+                    </span>
                   </div>
-                  {finance?.variance !== null && finance?.variance !== undefined && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Variance</span>
-                      <span className={`font-medium ${finance.variance < 0 ? 'text-destructive' : 'text-success'}`}>
-                        {formatKES(finance.variance, finance.currency)}
-                      </span>
-                    </div>
-                  )}
-                  {finance?.latestCertificate && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Latest payment cert</span>
-                      <span className="font-medium text-foreground capitalize">
-                        #{finance.latestCertificate.certificate_number} · {finance.latestCertificate.status}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )
+                )}
+              </div>
             )}
 
             {/* Petty Cash stays base-tier - always visible regardless of subscription tier. */}
@@ -514,33 +518,35 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
               <span className="font-medium text-foreground">{formatKES(pettyCashTotal)}</span>
             </button>
 
-            {isPro && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {isContractor && (
-                  <Button size="sm" variant="outline" onClick={() => setSubView('contract')}>
-                    Contract
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => setSubView('budget')}>
-                  Budget & Costs
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {isContractor && isPro && (
+                <Button size="sm" variant="outline" onClick={() => setSubView('contract')}>
+                  Contract
                 </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setSubView('budget')}>
+                Budget & Costs
+              </Button>
+              {isPro && (
                 <Button size="sm" variant="outline" onClick={() => setSubView('certificates')}>
                   Payment Certs
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setSubView('payroll')}>
-                  <Banknote className="w-4 h-4 mr-1" /> Payroll
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setSubView('variations')}>
-                  <FileEdit className="w-4 h-4 mr-1" /> Variations
-                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setSubView('payroll')}>
+                <Banknote className="w-4 h-4 mr-1" /> Payroll
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setSubView('variations')}>
+                <FileEdit className="w-4 h-4 mr-1" /> Variations
+              </Button>
+              {isPro && (
                 <Button size="sm" variant="outline" onClick={() => setSubView('subcontractors')}>
                   <Users2 className="w-4 h-4 mr-1" /> Subcontractors
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setSubView('materialPayments')}>
-                  <Receipt className="w-4 h-4 mr-1" /> Material Payments
-                </Button>
-              </div>
-            )}
+              )}
+              <Button size="sm" variant="outline" onClick={() => setSubView('materialPayments')}>
+                <Receipt className="w-4 h-4 mr-1" /> Material Payments
+              </Button>
+            </div>
           </SectionCard>
         </div>
       </div>
