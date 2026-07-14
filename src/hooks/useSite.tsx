@@ -100,7 +100,12 @@ export function useCreateSite() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (siteData: { site_name: string; location?: string; description?: string }) => {
+    mutationFn: async (siteData: {
+      site_name: string;
+      location?: string;
+      description?: string;
+      subscription_tier: 'field_ops' | 'pro';
+    }) => {
       if (!user) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('sites')

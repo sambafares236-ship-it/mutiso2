@@ -7,6 +7,7 @@ export interface SubscriptionPayment {
   id: string;
   site_id: string;
   amount: number;
+  includes_bot: boolean;
   status: SubscriptionPaymentStatus;
   checkout_request_id: string;
   mpesa_receipt_number: string | null;
@@ -15,13 +16,19 @@ export interface SubscriptionPayment {
 }
 
 // Kicks off an STK Push via the mpesa-stk-push Edge Function. The function
-// itself resolves the amount (site.monthly_rate) and phone number (the
-// caller's own profile) server-side - this just needs the site_id.
+// itself resolves the amount (from the site's subscription_tier + include_bot)
+// and phone number (the caller's own profile) server-side.
 export function useInitiateSubscriptionPayment() {
   return useMutation({
-    mutationFn: async (siteId: string): Promise<{ checkout_request_id: string }> => {
+    mutationFn: async ({
+      site_id,
+      include_bot,
+    }: {
+      site_id: string;
+      include_bot: boolean;
+    }): Promise<{ checkout_request_id: string }> => {
       const { data, error } = await supabase.functions.invoke('mpesa-stk-push', {
-        body: { site_id: siteId },
+        body: { site_id, include_bot },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

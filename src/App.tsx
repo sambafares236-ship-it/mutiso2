@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { OfflineQueueProvider } from '@/hooks/useOfflineQueue';
 import Index from './pages/Index';
+import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import JoinPage from './pages/JoinPage';
 import Terms from './pages/Terms';
@@ -18,7 +19,8 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/app" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/join" element={<JoinPage />} />
             <Route path="/terms" element={<Terms />} />

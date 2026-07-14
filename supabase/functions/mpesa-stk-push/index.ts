@@ -1,6 +1,7 @@
-// Initiates a Safaricom Daraja STK Push against a site's monthly_rate,
-// called from the "Pay / Renew" action in the contractor/super-admin UI.
-// Requires a signed-in user (verify_jwt = true in config.toml).
+// Initiates a Safaricom Daraja STK Push for a site's tier price (+ the
+// WhatsApp bot add-on if requested), called from the "Pay / Renew" action
+// in the contractor/super-admin UI. Requires a signed-in user
+// (verify_jwt = true in config.toml).
 //
 // Secrets required (Supabase Edge Function secrets, set with
 // `supabase secrets set NAME=value --project-ref <ref>` against BOTH the
@@ -37,6 +38,13 @@ const MPESA_CALLBACK_URL = Deno.env.get('MPESA_CALLBACK_URL');
 
 const DARAJA_BASE_URL =
   MPESA_ENV === 'production' ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke';
+
+// Kept in sync manually with src/lib/pricing.ts (a Deno Edge Function can't
+// import from src/lib) - if these prices change, update both places.
+const TIER_PRICING: Record<string, { base: number; withBot: number }> = {
+  field_ops: { base: 2500, withBot: 4000 },
+  pro: { base: 5000, withBot: 7000 },
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,14 +93,14 @@ Deno.serve(async (req) => {
     return json({ error: 'Missing Authorization header' }, 401);
   }
 
-  let payload: { site_id?: string };
+  let payload: { site_id?: string; include_bot?: boolean };
   try {
     payload = await req.json();
   } catch {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { site_id } = payload;
+  const { site_id, include_bot } = payload;
   if (!site_id) {
     return json({ error: 'Missing site_id' }, 400);
   }
@@ -118,13 +126,19 @@ Deno.serve(async (req) => {
 
   const { data: site, error: siteError } = await callerClient
     .from('sites')
-    .select('id, monthly_rate')
+    .select('id, subscription_tier')
     .eq('id', site_id)
     .single();
 
   if (siteError || !site) {
     return json({ error: 'Site not found or you are not authorized for this site' }, 403);
   }
+
+  const tierPricing = TIER_PRICING[site.subscription_tier];
+  if (!tierPricing) {
+    return json({ error: `Unknown subscription tier: ${site.subscription_tier}` }, 500);
+  }
+  const includesBot = include_bot === true;
 
   const { data: profile, error: profileError } = await callerClient
     .from('profiles')
@@ -152,7 +166,7 @@ Deno.serve(async (req) => {
 
   const timestamp = darajaTimestamp(new Date());
   const password = btoa(`${MPESA_SHORTCODE}${MPESA_PASSKEY}${timestamp}`);
-  const amount = Math.max(1, Math.round(Number(site.monthly_rate)));
+  const amount = includesBot ? tierPricing.withBot : tierPricing.base;
 
   const stkResp = await fetch(`${DARAJA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
     method: 'POST',
@@ -184,6 +198,7 @@ Deno.serve(async (req) => {
   const { error: insertError } = await serviceClient.from('subscription_payment').insert({
     site_id,
     amount,
+    includes_bot: includesBot,
     phone_number: normalizedPhone,
     checkout_request_id: stkData.CheckoutRequestID,
     merchant_request_id: stkData.MerchantRequestID,

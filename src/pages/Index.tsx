@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TIER_PRICING, TIER_LABEL } from '@/lib/pricing';
 import ForemanDashboard from './ForemanDashboard';
 import { ProjectOverviewView } from '@/components/forms/ProjectOverviewView';
 import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog';
@@ -21,6 +23,7 @@ import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog'
 const createSiteSchema = z.object({
   site_name: z.string().min(1, 'Site name is required'),
   location: z.string().optional(),
+  subscription_tier: z.enum(['field_ops', 'pro']),
 });
 type CreateSiteValues = z.infer<typeof createSiteSchema>;
 
@@ -172,13 +175,19 @@ function ContractorView() {
   const { data: sites, isLoading } = useAdminSites();
   const createSite = useCreateSite();
   const [overviewSite, setOverviewSite] = useState<{ id: string; site_name: string } | null>(null);
-  const [paySite, setPaySite] = useState<{ id: string; site_name: string; monthly_rate: number } | null>(null);
+  const [paySite, setPaySite] = useState<{ id: string; site_name: string; subscription_tier: 'field_ops' | 'pro' } | null>(
+    null,
+  );
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { isSubmitting },
-  } = useForm<CreateSiteValues>({ resolver: zodResolver(createSiteSchema) });
+  } = useForm<CreateSiteValues>({
+    resolver: zodResolver(createSiteSchema),
+    defaultValues: { subscription_tier: 'field_ops' },
+  });
 
   const onSubmit = async (values: CreateSiteValues) => {
     try {
@@ -204,6 +213,25 @@ function ContractorView() {
           <Label htmlFor="location">Location</Label>
           <Input id="location" placeholder="Nairobi" {...register('location')} />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="subscription_tier">Plan</Label>
+          <Controller
+            name="subscription_tier"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="subscription_tier">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="field_ops">{TIER_LABEL.field_ops} - KES {TIER_PRICING.field_ops.base}/mo</SelectItem>
+                  <SelectItem value="pro">{TIER_LABEL.pro} - KES {TIER_PRICING.pro.base}/mo</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          <p className="text-xs text-muted-foreground">Starts with a 7-day free trial (WhatsApp bot not included).</p>
+        </div>
         <Button type="submit" variant="construction" className="w-full" disabled={isSubmitting}>
           CREATE SITE
         </Button>
@@ -228,8 +256,12 @@ function ContractorView() {
                 </span>
               </div>
               {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
+              <p className="text-xs text-muted-foreground mt-1">
+                {TIER_LABEL[site.subscription_tier as 'field_ops' | 'pro']}
+                {site.whatsapp_bot_enabled ? ' + WhatsApp Bot' : ''}
+              </p>
               {site.subscription_end && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground">
                   Subscription {new Date(site.subscription_end) < new Date() ? 'expired' : 'active until'}{' '}
                   {new Date(site.subscription_end).toLocaleDateString('en-KE')}
                 </p>
@@ -241,7 +273,13 @@ function ContractorView() {
                 <Button
                   size="sm"
                   variant="construction"
-                  onClick={() => setPaySite({ id: site.id, site_name: site.site_name, monthly_rate: site.monthly_rate })}
+                  onClick={() =>
+                    setPaySite({
+                      id: site.id,
+                      site_name: site.site_name,
+                      subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
+                    })
+                  }
                 >
                   <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
                 </Button>
@@ -261,7 +299,7 @@ function ContractorView() {
         <PaySubscriptionDialog
           siteId={paySite.id}
           siteName={paySite.site_name}
-          monthlyRate={paySite.monthly_rate}
+          subscriptionTier={paySite.subscription_tier}
           open={!!paySite}
           onClose={() => setPaySite(null)}
         />

@@ -10,7 +10,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { formatKES } from '@/lib/utils';
+import { TIER_PRICING, TIER_LABEL, type SubscriptionTier } from '@/lib/pricing';
 import {
   useInitiateSubscriptionPayment,
   useSubscriptionPaymentStatus,
@@ -20,19 +23,27 @@ import {
 interface PaySubscriptionDialogProps {
   siteId: string;
   siteName: string;
-  monthlyRate: number;
+  subscriptionTier: SubscriptionTier;
   open: boolean;
   onClose: () => void;
 }
 
-export function PaySubscriptionDialog({ siteId, siteName, monthlyRate, open, onClose }: PaySubscriptionDialogProps) {
+export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open, onClose }: PaySubscriptionDialogProps) {
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
+  const [includeBot, setIncludeBot] = useState(false);
   const initiatePayment = useInitiateSubscriptionPayment();
   const { data: payment } = useSubscriptionPaymentStatus(checkoutRequestId);
   const invalidateSites = useInvalidateSitesAfterPayment();
 
+  const pricing = TIER_PRICING[subscriptionTier];
+  const amount = includeBot ? pricing.withBot : pricing.base;
+  const botAddonPrice = pricing.withBot - pricing.base;
+
   useEffect(() => {
-    if (!open) setCheckoutRequestId(null);
+    if (!open) {
+      setCheckoutRequestId(null);
+      setIncludeBot(false);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -47,7 +58,7 @@ export function PaySubscriptionDialog({ siteId, siteName, monthlyRate, open, onC
 
   const handlePay = async () => {
     try {
-      const result = await initiatePayment.mutateAsync(siteId);
+      const result = await initiatePayment.mutateAsync({ site_id: siteId, include_bot: includeBot });
       setCheckoutRequestId(result.checkout_request_id);
       toast.success('STK push sent', { description: 'Check your phone and enter your M-Pesa PIN.' });
     } catch (err) {
@@ -60,13 +71,25 @@ export function PaySubscriptionDialog({ siteId, siteName, monthlyRate, open, onC
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Pay / Renew Subscription</DialogTitle>
-          <DialogDescription>{siteName}</DialogDescription>
+          <DialogDescription>
+            {siteName} - {TIER_LABEL[subscriptionTier]}
+          </DialogDescription>
         </DialogHeader>
 
         {!checkoutRequestId && (
           <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="include_bot"
+                checked={includeBot}
+                onCheckedChange={(checked) => setIncludeBot(checked === true)}
+              />
+              <Label htmlFor="include_bot" className="text-sm font-normal leading-snug">
+                Add the WhatsApp Bot assistant (+{formatKES(botAddonPrice)}/mo)
+              </Label>
+            </div>
             <p className="text-sm text-muted-foreground">
-              This will send an M-Pesa STK push for <span className="font-medium text-foreground">{formatKES(monthlyRate)}</span> to
+              This will send an M-Pesa STK push for <span className="font-medium text-foreground">{formatKES(amount)}</span> to
               the phone number on your profile, extending this site's subscription by one month.
             </p>
             <Button

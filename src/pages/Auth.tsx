@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HardHat, Loader2 } from 'lucide-react';
+import { normalizeKenyanPhone } from '@/lib/phone';
 
 type Mode = 'signup' | 'signin';
 
@@ -18,6 +19,7 @@ const schema = z.object({
   full_name: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  phone_number: z.string().optional(),
   agreed_to_terms: z.boolean().optional(),
 });
 
@@ -38,7 +40,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/', { replace: true });
+      navigate('/app', { replace: true });
     }
   }, [user, isLoading, navigate]);
 
@@ -49,6 +51,11 @@ export default function Auth() {
           setError('full_name', { message: 'Full name is required' });
           return;
         }
+        const normalizedPhone = normalizeKenyanPhone(values.phone_number ?? '');
+        if (!normalizedPhone) {
+          setError('phone_number', { message: 'Enter a valid Kenyan phone number (e.g. 07XXXXXXXX)' });
+          return;
+        }
         if (!values.agreed_to_terms) {
           setError('agreed_to_terms', { message: 'You must agree to the Terms and Privacy Policy' });
           return;
@@ -56,7 +63,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
-          options: { data: { full_name: values.full_name } },
+          options: { data: { full_name: values.full_name, phone_number: normalizedPhone } },
         });
         if (error) throw error;
         toast.success('Account created', { description: 'Welcome to Mutiso.AI.' });
@@ -68,7 +75,7 @@ export default function Auth() {
         if (error) throw error;
         toast.success('Welcome back');
       }
-      navigate('/', { replace: true });
+      navigate('/app', { replace: true });
     } catch (err) {
       toast.error(mode === 'signup' ? 'Sign up failed' : 'Sign in failed', {
         description: err instanceof Error ? err.message : 'Please try again.',
@@ -116,6 +123,17 @@ export default function Auth() {
               <Label htmlFor="full_name">Full Name</Label>
               <Input id="full_name" type="text" placeholder="John Kamau" {...register('full_name')} />
               {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">Phone Number (WhatsApp)</Label>
+              <Input id="phone_number" type="tel" placeholder="07XX XXX XXX" {...register('phone_number')} />
+              <p className="text-xs text-muted-foreground">
+                Used for M-Pesa payments and the WhatsApp bot/alerts - must be able to receive WhatsApp messages.
+              </p>
+              {errors.phone_number && <p className="text-xs text-destructive">{errors.phone_number.message}</p>}
             </div>
           )}
 

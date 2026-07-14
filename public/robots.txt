@@ -1,0 +1,10 @@
+# /app is auth-walled and always redirects a logged-out crawler to /auth -
+# nothing useful to index there, so it's excluded to avoid wasting crawl budget.
+User-agent: *
+Allow: /
+Allow: /terms
+Allow: /privacy
+Allow: /auth
+Disallow: /app
+
+Sitemap: https://mutisoai.vercel.app/sitemap.xml

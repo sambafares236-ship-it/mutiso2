@@ -64,7 +64,7 @@ export default function JoinPage() {
       toast.success('Welcome to Mutiso.AI!', {
         description: `You have been assigned to ${invite.site?.site_name ?? 'your site'}.`,
       });
-      navigate('/', { replace: true });
+      navigate('/app', { replace: true });
     } catch (err) {
       toast.error('Could not complete signup', { description: err instanceof Error ? err.message : undefined });
     }

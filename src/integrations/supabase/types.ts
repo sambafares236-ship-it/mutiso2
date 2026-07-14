@@ -1494,13 +1494,14 @@ export type Database = {
           location: string | null
           location_recapture_requested_at: string | null
           longitude: number | null
-          monthly_rate: number
           owner_id: string
           site_name: string
           status: string
           subscription_end: string | null
           subscription_start: string | null
+          subscription_tier: string
           updated_at: string
+          whatsapp_bot_enabled: boolean
         }
         Insert: {
           approved_at?: string | null
@@ -1513,13 +1514,14 @@ export type Database = {
           location?: string | null
           location_recapture_requested_at?: string | null
           longitude?: number | null
-          monthly_rate?: number
           owner_id: string
           site_name: string
           status?: string
           subscription_end?: string | null
           subscription_start?: string | null
+          subscription_tier?: string
           updated_at?: string
+          whatsapp_bot_enabled?: boolean
         }
         Update: {
           approved_at?: string | null
@@ -1532,13 +1534,14 @@ export type Database = {
           location?: string | null
           location_recapture_requested_at?: string | null
           longitude?: number | null
-          monthly_rate?: number
           owner_id?: string
           site_name?: string
           status?: string
           subscription_end?: string | null
           subscription_start?: string | null
+          subscription_tier?: string
           updated_at?: string
+          whatsapp_bot_enabled?: boolean
         }
         Relationships: []
       }
@@ -1637,6 +1640,7 @@ export type Database = {
           checkout_request_id: string
           completed_at: string | null
           id: string
+          includes_bot: boolean
           initiated_at: string
           initiated_by: string | null
           merchant_request_id: string | null
@@ -1650,6 +1654,7 @@ export type Database = {
           checkout_request_id: string
           completed_at?: string | null
           id?: string
+          includes_bot?: boolean
           initiated_at?: string
           initiated_by?: string | null
           merchant_request_id?: string | null
@@ -1663,6 +1668,7 @@ export type Database = {
           checkout_request_id?: string
           completed_at?: string | null
           id?: string
+          includes_bot?: boolean
           initiated_at?: string
           initiated_by?: string | null
           merchant_request_id?: string | null
