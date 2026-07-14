@@ -45,20 +45,16 @@ export function useApproveSite() {
   return useMutation({
     mutationFn: async (siteId: string) => {
       if (!user) throw new Error('Not authenticated');
-      const today = new Date();
-      const trialEnd = new Date(today);
-      trialEnd.setDate(trialEnd.getDate() + 7);
+      // No free trial - approval just marks the site as legitimate.
+      // subscription_start/subscription_end stay null until the first
+      // successful payment sets them (_extend_site_subscription), so the
+      // site has no usable period until it's actually paid for.
       const { error } = await supabase
         .from('sites')
         .update({
           status: 'active',
           approved_by: user.id,
-          approved_at: today.toISOString(),
-          subscription_start: today.toISOString().split('T')[0],
-          // 7-day free trial starts on approval - subscription_end doubles
-          // as "when does access expire" whether that expiry came from the
-          // trial or a real payment, so no separate trial_ends_at column.
-          subscription_end: trialEnd.toISOString().split('T')[0],
+          approved_at: new Date().toISOString(),
         })
         .eq('id', siteId);
       if (error) throw error;

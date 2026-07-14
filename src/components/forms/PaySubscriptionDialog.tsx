@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle2, XCircle, Smartphone } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Smartphone, Send } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,13 +11,16 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatKES } from '@/lib/utils';
 import { TIER_PRICING, TIER_LABEL, type SubscriptionTier } from '@/lib/pricing';
+import { PAYMENT_MODE, MANUAL_PAYMENT_PHONE_DISPLAY } from '@/lib/payment';
 import {
   useInitiateSubscriptionPayment,
   useSubscriptionPaymentStatus,
   useInvalidateSitesAfterPayment,
+  useRequestManualPayment,
 } from '@/hooks/useSubscriptionPayment';
 
 interface PaySubscriptionDialogProps {
@@ -31,7 +34,10 @@ interface PaySubscriptionDialogProps {
 export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open, onClose }: PaySubscriptionDialogProps) {
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [includeBot, setIncludeBot] = useState(false);
+  const [mpesaCode, setMpesaCode] = useState('');
+  const [manualReported, setManualReported] = useState(false);
   const initiatePayment = useInitiateSubscriptionPayment();
+  const requestManualPayment = useRequestManualPayment();
   const { data: payment } = useSubscriptionPaymentStatus(checkoutRequestId);
   const invalidateSites = useInvalidateSitesAfterPayment();
 
@@ -43,6 +49,8 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
     if (!open) {
       setCheckoutRequestId(null);
       setIncludeBot(false);
+      setMpesaCode('');
+      setManualReported(false);
     }
   }, [open]);
 
@@ -66,6 +74,20 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
     }
   };
 
+  const handleReportManualPayment = async () => {
+    try {
+      await requestManualPayment.mutateAsync({
+        site_id: siteId,
+        include_bot: includeBot,
+        mpesa_receipt_number: mpesaCode || undefined,
+      });
+      setManualReported(true);
+      toast.success('Payment reported', { description: "We'll confirm it and extend your subscription shortly." });
+    } catch (err) {
+      toast.error('Could not report payment', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-sm">
@@ -76,7 +98,59 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
           </DialogDescription>
         </DialogHeader>
 
-        {!checkoutRequestId && (
+        {PAYMENT_MODE === 'manual' && !manualReported && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="include_bot"
+                checked={includeBot}
+                onCheckedChange={(checked) => setIncludeBot(checked === true)}
+              />
+              <Label htmlFor="include_bot" className="text-sm font-normal leading-snug">
+                Add the WhatsApp Bot assistant (+{formatKES(botAddonPrice)}/mo)
+              </Label>
+            </div>
+            <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
+              <p className="text-sm text-foreground">
+                Send <span className="font-medium">{formatKES(amount)}</span> via M-Pesa (Send Money) to:
+              </p>
+              <p className="font-display text-2xl text-primary">{MANUAL_PAYMENT_PHONE_DISPLAY}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mpesa_code">M-Pesa confirmation code (optional)</Label>
+              <Input
+                id="mpesa_code"
+                placeholder="e.g. QFT1XXXXXX"
+                value={mpesaCode}
+                onChange={(e) => setMpesaCode(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="construction"
+              className="w-full"
+              onClick={handleReportManualPayment}
+              disabled={requestManualPayment.isPending}
+            >
+              {requestManualPayment.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              I've Sent the Payment
+            </Button>
+          </div>
+        )}
+
+        {PAYMENT_MODE === 'manual' && manualReported && (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <CheckCircle2 className="w-8 h-8 text-success" />
+            <p className="text-sm text-foreground">
+              Payment reported. An admin will confirm it and extend this site's subscription shortly.
+            </p>
+          </div>
+        )}
+
+        {PAYMENT_MODE === 'stk_push' && !checkoutRequestId && (
           <div className="space-y-4">
             <div className="flex items-start gap-2">
               <Checkbox
@@ -108,7 +182,7 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
           </div>
         )}
 
-        {checkoutRequestId && payment?.status !== 'completed' && payment?.status !== 'failed' && (
+        {PAYMENT_MODE === 'stk_push' && checkoutRequestId && payment?.status !== 'completed' && payment?.status !== 'failed' && (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">

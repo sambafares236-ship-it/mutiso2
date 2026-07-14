@@ -11,8 +11,14 @@ export interface SubscriptionPayment {
   status: SubscriptionPaymentStatus;
   checkout_request_id: string;
   mpesa_receipt_number: string | null;
+  payment_method: 'mpesa_stk' | 'manual';
+  phone_number: string;
   initiated_at: string;
   completed_at: string | null;
+}
+
+export interface PendingManualPayment extends SubscriptionPayment {
+  site_name: string;
 }
 
 // Kicks off an STK Push via the mpesa-stk-push Edge Function. The function
@@ -64,5 +70,67 @@ export function useInvalidateSitesAfterPayment() {
   return () => {
     queryClient.invalidateQueries({ queryKey: ['adminSites'] });
     queryClient.invalidateQueries({ queryKey: ['pendingSites'] });
+    queryClient.invalidateQueries({ queryKey: ['pendingManualPayments'] });
   };
+}
+
+// Self-reports a manual M-Pesa payment as pending - does NOT extend the
+// subscription itself. Only a Super Admin confirming it (below) does that.
+export function useRequestManualPayment() {
+  return useMutation({
+    mutationFn: async ({
+      site_id,
+      include_bot,
+      mpesa_receipt_number,
+    }: {
+      site_id: string;
+      include_bot: boolean;
+      mpesa_receipt_number?: string;
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('request_manual_subscription_payment', {
+        p_site_id: site_id,
+        p_includes_bot: include_bot,
+        p_mpesa_receipt_number: mpesa_receipt_number || undefined,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+  });
+}
+
+export function usePendingManualPayments() {
+  return useQuery({
+    queryKey: ['pendingManualPayments'],
+    queryFn: async (): Promise<PendingManualPayment[]> => {
+      const { data, error } = await supabase
+        .from('subscription_payment')
+        .select('*, sites(site_name)')
+        .eq('payment_method', 'manual')
+        .eq('status', 'pending')
+        .order('initiated_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((row) => {
+        const { sites, ...rest } = row as typeof row & { sites: { site_name: string } | null };
+        return { ...rest, site_name: sites?.site_name ?? 'Unknown site' } as PendingManualPayment;
+      });
+    },
+  });
+}
+
+export function useConfirmManualPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ payment_id, mpesa_receipt_number }: { payment_id: string; mpesa_receipt_number?: string }) => {
+      const { error } = await supabase.rpc('confirm_manual_subscription_payment', {
+        p_payment_id: payment_id,
+        p_mpesa_receipt_number: mpesa_receipt_number || undefined,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pendingManualPayments'] });
+      queryClient.invalidateQueries({ queryKey: ['adminSites'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingSites'] });
+    },
+  });
 }

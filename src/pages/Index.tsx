@@ -10,12 +10,14 @@ import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
 import { usePendingSites, useApproveSite, useRejectSite } from '@/hooks/useSuperAdmin';
 import { useSitePermits, useDecidePermit, PERMIT_TYPE_LABELS } from '@/hooks/usePermits';
+import { usePendingManualPayments, useConfirmManualPayment } from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TIER_PRICING, TIER_LABEL } from '@/lib/pricing';
+import { formatKES } from '@/lib/utils';
 import ForemanDashboard from './ForemanDashboard';
 import { ProjectOverviewView } from '@/components/forms/ProjectOverviewView';
 import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog';
@@ -230,7 +232,7 @@ function ContractorView() {
               </Select>
             )}
           />
-          <p className="text-xs text-muted-foreground">Starts with a 7-day free trial (WhatsApp bot not included).</p>
+          <p className="text-xs text-muted-foreground">Billing starts once an admin approves this site.</p>
         </div>
         <Button type="submit" variant="construction" className="w-full" disabled={isSubmitting}>
           CREATE SITE
@@ -308,6 +310,59 @@ function ContractorView() {
   );
 }
 
+function PendingManualPayments() {
+  const { data: payments, isLoading } = usePendingManualPayments();
+  const confirmPayment = useConfirmManualPayment();
+
+  const handleConfirm = async (paymentId: string, siteName: string) => {
+    try {
+      await confirmPayment.mutateAsync({ payment_id: paymentId });
+      toast.success('Payment confirmed', { description: `${siteName}'s subscription has been extended.` });
+    } catch (err) {
+      toast.error('Could not confirm payment', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  return (
+    <div className="space-y-4 w-full max-w-lg">
+      <h2 className="font-display text-xl text-foreground flex items-center gap-2">
+        <CreditCard className="w-5 h-5 text-primary" /> Pending Manual Payments
+      </h2>
+
+      {isLoading ? (
+        <Skeleton className="h-20 w-full rounded-xl" />
+      ) : !payments?.length ? (
+        <p className="text-sm text-muted-foreground">No manual payments awaiting confirmation.</p>
+      ) : (
+        payments.map((payment) => (
+          <div key={payment.id} className="card-industrial p-4">
+            <p className="font-medium text-foreground">{payment.site_name}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {formatKES(payment.amount)}
+              {payment.includes_bot ? ' (incl. WhatsApp Bot)' : ''} - from {payment.phone_number}
+            </p>
+            {payment.mpesa_receipt_number && (
+              <p className="text-xs text-muted-foreground">Reported M-Pesa code: {payment.mpesa_receipt_number}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Reported {new Date(payment.initiated_at).toLocaleString('en-KE')}
+            </p>
+            <Button
+              size="sm"
+              variant="construction"
+              className="mt-3"
+              onClick={() => handleConfirm(payment.id, payment.site_name)}
+              disabled={confirmPayment.isPending}
+            >
+              <Check className="w-4 h-4 mr-1" /> Confirm Received
+            </Button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function SuperAdminView() {
   const { data: pendingSites, isLoading } = usePendingSites();
   const approveSite = useApproveSite();
@@ -332,47 +387,51 @@ function SuperAdminView() {
   };
 
   return (
-    <div className="space-y-4 w-full max-w-lg">
-      <h2 className="font-display text-xl text-foreground flex items-center gap-2">
-        <ShieldCheck className="w-5 h-5 text-primary" /> Pending Site Approvals
-      </h2>
+    <div className="space-y-8 w-full max-w-lg">
+      <PendingManualPayments />
 
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-        </div>
-      ) : !pendingSites?.length ? (
-        <p className="text-sm text-muted-foreground">No sites awaiting approval.</p>
-      ) : (
-        pendingSites.map((site) => (
-          <div key={site.id} className="card-industrial p-4">
-            <p className="font-medium text-foreground">{site.site_name}</p>
-            {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
-            <p className="text-xs text-muted-foreground mt-1">
-              Owner: {site.owner_name ?? 'Unknown'} ({site.owner_email ?? 'no email'})
-            </p>
-            <div className="flex gap-2 mt-3">
-              <Button
-                size="sm"
-                variant="construction"
-                onClick={() => handleApprove(site.id, site.site_name)}
-                disabled={approveSite.isPending || rejectSite.isPending}
-              >
-                <Check className="w-4 h-4 mr-1" /> Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleReject(site.id, site.site_name)}
-                disabled={approveSite.isPending || rejectSite.isPending}
-              >
-                <XIcon className="w-4 h-4 mr-1" /> Reject
-              </Button>
-            </div>
+      <div className="space-y-4 w-full max-w-lg">
+        <h2 className="font-display text-xl text-foreground flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-primary" /> Pending Site Approvals
+        </h2>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
           </div>
-        ))
-      )}
+        ) : !pendingSites?.length ? (
+          <p className="text-sm text-muted-foreground">No sites awaiting approval.</p>
+        ) : (
+          pendingSites.map((site) => (
+            <div key={site.id} className="card-industrial p-4">
+              <p className="font-medium text-foreground">{site.site_name}</p>
+              {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
+              <p className="text-xs text-muted-foreground mt-1">
+                Owner: {site.owner_name ?? 'Unknown'} ({site.owner_email ?? 'no email'})
+              </p>
+              <div className="flex gap-2 mt-3">
+                <Button
+                  size="sm"
+                  variant="construction"
+                  onClick={() => handleApprove(site.id, site.site_name)}
+                  disabled={approveSite.isPending || rejectSite.isPending}
+                >
+                  <Check className="w-4 h-4 mr-1" /> Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleReject(site.id, site.site_name)}
+                  disabled={approveSite.isPending || rejectSite.isPending}
+                >
+                  <XIcon className="w-4 h-4 mr-1" /> Reject
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -55,8 +55,8 @@ const FAQS = [
     a: 'Yes — pricing is in KES, and the safety/compliance workflows are built around OSHA 2007, WIBA 2007, DOSHS, NCA, and Energy Act 2019 references.',
   },
   {
-    q: 'Does the free trial really include everything?',
-    a: 'Every trial site gets full access to its chosen plan for 7 days, including real-time WhatsApp safety alerts for serious incidents. The only thing excluded during the trial is the conversational WhatsApp bot assistant.',
+    q: 'Is there a free trial?',
+    a: "No — billing starts as soon as your site is approved. There's no free trial period.",
   },
   {
     q: 'Do I need a smartphone app or special hardware?',
@@ -68,7 +68,7 @@ const FAQS = [
   },
   {
     q: 'How do I pay?',
-    a: 'Subscriptions are billed monthly via M-Pesa — you get an STK push to your phone and approve it with your M-Pesa PIN.',
+    a: 'Subscriptions are billed monthly via M-Pesa. Once your site is approved, you can pay from inside the app and your subscription is activated after confirmation.',
   },
 ];
 
@@ -159,13 +159,13 @@ export default function Landing() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="construction" size="xl" onClick={() => navigate('/auth')}>
-              Start Free 7-Day Trial <ArrowRight className="w-5 h-5 ml-1" />
+              Get Started <ArrowRight className="w-5 h-5 ml-1" />
             </Button>
             <Button variant="outline" size="xl" onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}>
               See Pricing
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">No card required to start. Cancel anytime.</p>
+          <p className="mt-3 text-xs text-muted-foreground">Billed monthly via M-Pesa once your site is approved.</p>
         </motion.div>
       </section>
 
@@ -233,7 +233,7 @@ export default function Landing() {
       <section id="pricing" className="py-14">
         <div className="container px-4 max-w-4xl mx-auto">
           <h2 className="font-display text-2xl text-foreground text-center">Simple, per-site pricing</h2>
-          <p className="text-center text-muted-foreground mt-2">Start with a 7-day free trial on either plan — no WhatsApp bot during the trial.</p>
+          <p className="text-center text-muted-foreground mt-2">Billed monthly via M-Pesa, per site, once your site is approved.</p>
           <div className="mt-8 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="card-industrial p-6">
               <p className="font-display text-xl text-foreground">Field Ops & Safety</p>
@@ -269,7 +269,7 @@ export default function Landing() {
           </div>
           <div className="mt-8 text-center">
             <Button variant="construction" size="xl" onClick={() => navigate('/auth')}>
-              Start Free Trial <ArrowRight className="w-5 h-5 ml-1" />
+              Get Started <ArrowRight className="w-5 h-5 ml-1" />
             </Button>
           </div>
         </div>

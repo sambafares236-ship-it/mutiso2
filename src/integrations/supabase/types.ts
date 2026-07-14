@@ -1645,6 +1645,7 @@ export type Database = {
           initiated_by: string | null
           merchant_request_id: string | null
           mpesa_receipt_number: string | null
+          payment_method: string
           phone_number: string
           site_id: string
           status: string
@@ -1659,6 +1660,7 @@ export type Database = {
           initiated_by?: string | null
           merchant_request_id?: string | null
           mpesa_receipt_number?: string | null
+          payment_method?: string
           phone_number: string
           site_id: string
           status?: string
@@ -1673,6 +1675,7 @@ export type Database = {
           initiated_by?: string | null
           merchant_request_id?: string | null
           mpesa_receipt_number?: string | null
+          payment_method?: string
           phone_number?: string
           site_id?: string
           status?: string
@@ -2172,6 +2175,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _extend_site_subscription: {
+        Args: { p_includes_bot: boolean; p_site_id: string }
+        Returns: undefined
+      }
       bot_query_site_data: {
         Args: {
           p_date_range_days?: number
@@ -2214,6 +2221,10 @@ export type Database = {
           p_mpesa_receipt_number?: string
           p_status: string
         }
+        Returns: undefined
+      }
+      confirm_manual_subscription_payment: {
+        Args: { p_mpesa_receipt_number?: string; p_payment_id: string }
         Returns: undefined
       }
       consume_invite: { Args: { p_token: string }; Returns: string }
@@ -2297,6 +2308,14 @@ export type Database = {
       replace_site_activities: {
         Args: { p_activities: Json; p_site_id: string }
         Returns: number
+      }
+      request_manual_subscription_payment: {
+        Args: {
+          p_includes_bot: boolean
+          p_mpesa_receipt_number?: string
+          p_site_id: string
+        }
+        Returns: string
       }
       return_tool: {
         Args: {
