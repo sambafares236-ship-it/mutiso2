@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
@@ -201,8 +201,24 @@ function ContractorView() {
     }
   };
 
+  const hasActiveSite = sites?.some((s) => s.status === 'active');
+
   return (
     <div className="space-y-6 w-full max-w-lg">
+      {!isLoading && !hasActiveSite && (
+        <div className="card-industrial p-4 border-2 border-primary flex items-start gap-3">
+          <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-foreground">Waiting on admin approval</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {sites?.length
+                ? "Your site(s) are pending review. Management features (Overview, Pay/Renew, invites, permits) unlock once an admin approves at least one site."
+                : 'Create your first site below to get started - an admin needs to approve it before you can manage it.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="card-industrial p-4 space-y-3" noValidate>
         <h2 className="font-display text-xl text-foreground flex items-center gap-2">
           <Building className="w-5 h-5 text-primary" /> New Site
@@ -268,26 +284,37 @@ function ContractorView() {
                   {new Date(site.subscription_end).toLocaleDateString('en-KE')}
                 </p>
               )}
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={() => setOverviewSite({ id: site.id, site_name: site.site_name })}>
-                  <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
-                </Button>
-                <Button
-                  size="sm"
-                  variant="construction"
-                  onClick={() =>
-                    setPaySite({
-                      id: site.id,
-                      site_name: site.site_name,
-                      subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
-                    })
-                  }
-                >
-                  <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
-                </Button>
-              </div>
-              <InviteRow siteId={site.id} siteName={site.site_name} />
-              <PermitApprovalRow siteId={site.id} />
+              {site.status === 'active' ? (
+                <>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="outline" onClick={() => setOverviewSite({ id: site.id, site_name: site.site_name })}>
+                      <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="construction"
+                      onClick={() =>
+                        setPaySite({
+                          id: site.id,
+                          site_name: site.site_name,
+                          subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
+                        })
+                      }
+                    >
+                      <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
+                    </Button>
+                  </div>
+                  <InviteRow siteId={site.id} siteName={site.site_name} />
+                  <PermitApprovalRow siteId={site.id} />
+                </>
+              ) : (
+                <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  {site.status === 'pending'
+                    ? 'Awaiting admin approval - management features unlock once approved.'
+                    : 'This site was not approved.'}
+                </div>
+              )}
             </div>
           ))
         )}
