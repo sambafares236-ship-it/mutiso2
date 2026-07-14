@@ -137,6 +137,22 @@ const CATEGORIES: CategoryConfig[] = [
   { key: 'environmental', label: 'Environmental', icon: Leaf, tiles: ENVIRONMENTAL_TILES },
 ];
 
+// Pro-exclusive tile keys and whole categories - kept as one small lookup
+// rather than annotating each TileConfig, since only a handful of tiles
+// need it. Matches the tier RLS gate (owns_pro_site/is_assigned_foreman_of_
+// pro_site) added in the same change - hiding these here is a UX nicety,
+// the database is what actually enforces it.
+const PRO_ONLY_TILE_KEYS: FormType[] = ['tools', 'payroll', 'defects'];
+const PRO_ONLY_CATEGORY_KEYS = ['heavyEquipment', 'assets', 'environmental'];
+
+function getTierFilteredCategories(isPro: boolean): CategoryConfig[] {
+  if (isPro) return CATEGORIES;
+  return CATEGORIES.filter((c) => !PRO_ONLY_CATEGORY_KEYS.includes(c.key)).map((c) => ({
+    ...c,
+    tiles: c.tiles.filter((t) => !PRO_ONLY_TILE_KEYS.includes(t.key)),
+  }));
+}
+
 function OfflineQueueBanner() {
   const { isOnline, pendingCount, failed, isFlushing, flush, dismissFailed } = useOfflineQueue();
 
@@ -207,11 +223,13 @@ function TileGrid({ title, tiles, onSelect }: { title: string; tiles: TileConfig
 }
 
 function CategorySidebar({
+  categories,
   activeCategory,
   onSelect,
   open,
   onOpenChange,
 }: {
+  categories: CategoryConfig[];
   activeCategory: string;
   onSelect: (key: string) => void;
   open: boolean;
@@ -224,7 +242,7 @@ function CategorySidebar({
           <SheetTitle className="font-display text-2xl text-primary tracking-wide">MUTISO.AI</SheetTitle>
         </SheetHeader>
         <nav className="flex-1 overflow-y-auto p-2">
-          {CATEGORIES.map((category) => {
+          {categories.map((category) => {
             const Icon = category.icon;
             const isActive = category.key === activeCategory;
             return (
@@ -281,11 +299,19 @@ export default function ForemanDashboard() {
     );
   }
 
-  const activeCategoryConfig = CATEGORIES.find((c) => c.key === activeCategory) ?? CATEGORIES[0];
+  const isPro = site.subscription_tier === 'pro';
+  const categories = getTierFilteredCategories(isPro);
+  const activeCategoryConfig = categories.find((c) => c.key === activeCategory) ?? categories[0];
 
   return (
     <div className="w-full max-w-lg">
-      <CategorySidebar activeCategory={activeCategory} onSelect={setActiveCategory} open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      <CategorySidebar
+        categories={categories}
+        activeCategory={activeCategoryConfig.key}
+        onSelect={setActiveCategory}
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+      />
 
       <div className="flex items-center gap-2 mb-4">
         <Button variant="outline" size="icon" onClick={() => setSidebarOpen(true)} className="flex-shrink-0">

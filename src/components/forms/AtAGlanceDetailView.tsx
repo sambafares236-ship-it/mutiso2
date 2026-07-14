@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { X, Users, Truck, PackageX, Banknote } from 'lucide-react';
+import { X, Users, Truck, PackageX, Banknote, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatKES } from '@/lib/utils';
+import { exportMaterialInventoryCsv } from '@/lib/csvExports';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -88,9 +90,29 @@ export function AtAGlanceDetailView({ siteId, type, onClose }: AtAGlanceDetailVi
             </div>
             <h2 className="font-display text-2xl text-primary">{title}</h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-6 h-6" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {type === 'lowStock' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={async () => {
+                  try {
+                    await exportMaterialInventoryCsv(siteId);
+                    toast.success('CSV downloaded');
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+                  }
+                }}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export full inventory
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

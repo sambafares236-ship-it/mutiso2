@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Banknote, X, Plus, Check, Clock } from 'lucide-react';
+import { Banknote, X, Plus, Check, Clock, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   useSitePayrollRuns,
@@ -13,6 +13,7 @@ import {
   sundayOfThisWeek,
 } from '@/hooks/usePayroll';
 import { formatKES } from '@/lib/utils';
+import { exportPayrollCsv } from '@/lib/csvExports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -161,6 +162,17 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
   // error. Detect that case up front and just open the existing run
   // instead of attempting a second insert.
   const currentWeekRun = runs?.find((r) => r.week_start === mondayOfThisWeek() && r.week_end === sundayOfThisWeek());
+  const selectedRun = runs?.find((r) => r.id === selectedRunId);
+
+  const handleExportPayroll = async () => {
+    if (!selectedRun) return;
+    try {
+      await exportPayrollCsv(selectedRun.id, selectedRun.week_start, selectedRun.week_end);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
 
   const handleGenerateOrView = async () => {
     if (currentWeekRun) {
@@ -199,9 +211,17 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
 
         {selectedRunId ? (
           <div>
-            <Button variant="ghost" size="sm" className="mb-3" onClick={() => setSelectedRunId(null)}>
-              &larr; Back to runs
-            </Button>
+            <div className="flex items-center justify-between mb-3">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedRunId(null)}>
+                &larr; Back to runs
+              </Button>
+              {!!lines?.length && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPayroll}>
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </Button>
+              )}
+            </div>
             {linesLoading ? (
               <Skeleton className="h-24 w-full rounded-xl" />
             ) : !lines?.length ? (

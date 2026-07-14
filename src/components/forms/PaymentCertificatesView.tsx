@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Receipt, X, Loader2, Plus, Check } from 'lucide-react';
+import { Receipt, X, Loader2, Plus, Check, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSitePaymentCertificates, useGeneratePaymentCertificate, useUpdateCertificateStatus } from '@/hooks/usePaymentCertificates';
 import { formatKES } from '@/lib/utils';
+import { exportPaymentCertificatesCsv } from '@/lib/csvExports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +71,16 @@ export function PaymentCertificatesView({ siteId, onClose }: PaymentCertificates
     }
   };
 
+  const handleExport = async () => {
+    if (!certificates?.length) return;
+    try {
+      await exportPaymentCertificatesCsv(siteId, certificates);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
+
   const handleAdvanceStatus = async (certId: string, nextStatus: 'certified' | 'paid') => {
     try {
       await updateStatus.mutateAsync({ id: certId, site_id: siteId, status: nextStatus, certified_by: user?.id });
@@ -95,6 +106,14 @@ export function PaymentCertificatesView({ siteId, onClose }: PaymentCertificates
         </div>
 
         <div className="space-y-3">
+          {!!certificates?.length && (
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </Button>
+            </div>
+          )}
           {isLoading ? (
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : !certificates?.length ? (

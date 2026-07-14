@@ -190,7 +190,11 @@ function PermitApprovalRow({ siteId }: { siteId: string }) {
 function ContractorView() {
   const { data: sites, isLoading } = useAdminSites();
   const createSite = useCreateSite();
-  const [overviewSite, setOverviewSite] = useState<{ id: string; site_name: string } | null>(null);
+  const [overviewSite, setOverviewSite] = useState<{
+    id: string;
+    site_name: string;
+    subscription_tier: 'field_ops' | 'pro';
+  } | null>(null);
   const [paySite, setPaySite] = useState<{ id: string; site_name: string; subscription_tier: 'field_ops' | 'pro' } | null>(
     null,
   );
@@ -301,7 +305,17 @@ function ContractorView() {
               {site.status === 'active' ? (
                 <>
                   <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" onClick={() => setOverviewSite({ id: site.id, site_name: site.site_name })}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setOverviewSite({
+                          id: site.id,
+                          site_name: site.site_name,
+                          subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
+                        })
+                      }
+                    >
                       <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
                     </Button>
                     <Button
@@ -335,7 +349,12 @@ function ContractorView() {
       </div>
 
       {overviewSite && (
-        <ProjectOverviewView siteId={overviewSite.id} siteName={overviewSite.site_name} onClose={() => setOverviewSite(null)} />
+        <ProjectOverviewView
+          siteId={overviewSite.id}
+          siteName={overviewSite.site_name}
+          subscriptionTier={overviewSite.subscription_tier}
+          onClose={() => setOverviewSite(null)}
+        />
       )}
 
       {paySite && (

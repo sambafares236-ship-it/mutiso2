@@ -3,11 +3,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Wallet, X, Loader2, Plus } from 'lucide-react';
+import { Wallet, X, Loader2, Plus, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSiteBudget, useCreateBudgetLine } from '@/hooks/useBudget';
 import { useSiteActualCosts, useCreateActualCost } from '@/hooks/useActualCosts';
 import { formatKES } from '@/lib/utils';
+import { exportBudgetLinesCsv, exportActualCostsCsv } from '@/lib/csvExports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,6 +72,26 @@ export function BudgetView({ siteId, onClose }: BudgetViewProps) {
     }
   };
 
+  const handleExportBudget = async () => {
+    if (!budgetLines?.length) return;
+    try {
+      await exportBudgetLinesCsv(siteId, budgetLines);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
+
+  const handleExportActuals = async () => {
+    if (!actualCosts?.length) return;
+    try {
+      await exportActualCostsCsv(siteId, actualCosts);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
+
   const onSubmitCost = async (values: CostFormValues) => {
     if (!user) return;
     try {
@@ -124,6 +145,14 @@ export function BudgetView({ siteId, onClose }: BudgetViewProps) {
 
         {tab === 'budget' ? (
           <div className="space-y-3">
+            {!!budgetLines?.length && (
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportBudget}>
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
             {budgetLoading ? (
               <Skeleton className="h-20 w-full rounded-xl" />
             ) : !budgetLines?.length ? (
@@ -172,6 +201,14 @@ export function BudgetView({ siteId, onClose }: BudgetViewProps) {
           </div>
         ) : (
           <div className="space-y-3">
+            {!!actualCosts?.length && (
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportActuals}>
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
             {costsLoading ? (
               <Skeleton className="h-20 w-full rounded-xl" />
             ) : !actualCosts?.length ? (

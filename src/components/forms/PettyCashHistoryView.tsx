@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Wallet, X } from 'lucide-react';
+import { Wallet, X, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useSitePettyCash, useSitePettyCashTotal } from '@/hooks/usePettyCash';
 import { formatKES } from '@/lib/utils';
+import { exportPettyCashCsv } from '@/lib/csvExports';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -38,6 +40,16 @@ export function PettyCashHistoryView({ siteId, onClose }: PettyCashHistoryViewPr
   const { data: total, isLoading: totalLoading } = useSitePettyCashTotal(siteId);
   const { data: receiptUrls } = useReceiptUrls(siteId);
 
+  const handleExport = async () => {
+    if (!entries?.length) return;
+    try {
+      await exportPettyCashCsv(siteId, entries);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm animate-fade-in">
       <div className="container max-w-lg mx-auto px-4 py-6 h-full overflow-y-auto">
@@ -57,6 +69,15 @@ export function PettyCashHistoryView({ siteId, onClose }: PettyCashHistoryViewPr
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Total spent (project to date)</p>
           {totalLoading ? <Skeleton className="h-7 w-32 mt-1" /> : <p className="text-2xl font-bold text-foreground">{formatKES(total)}</p>}
         </div>
+
+        {!!entries?.length && (
+          <div className="flex justify-end mb-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </Button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="space-y-2">

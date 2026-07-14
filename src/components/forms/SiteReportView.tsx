@@ -1,11 +1,28 @@
 import { useState } from 'react';
 import { History, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { useSiteReport, type ReportEntry } from '@/hooks/useSiteReport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CategoryRow, TYPE_ORDER } from '@/components/CategoryRow';
+import {
+  exportAttendanceCsv,
+  exportMaterialsDeliveredCsv,
+  exportMaterialsUsedCsv,
+  exportSiteDiaryCsv,
+} from '@/lib/csvExports';
+
+// Only categories with a real CSV export defined get the export button -
+// see src/lib/csvExports.ts. Others (photos, incidents, etc.) don't have
+// one yet.
+const EXPORTERS: Partial<Record<ReportEntry['type'], (siteId: string, start: string, end: string) => Promise<void>>> = {
+  attendance: exportAttendanceCsv,
+  delivery: exportMaterialsDeliveredCsv,
+  usage: exportMaterialsUsedCsv,
+  diary: exportSiteDiaryCsv,
+};
 
 interface SiteReportViewProps {
   siteId: string;
@@ -38,6 +55,17 @@ export function SiteReportView({ siteId, onClose, excludeTypes = [] }: SiteRepor
         : { startDate: daysAgo(mode), endDate: daysAgo(0) };
 
   const { data: entries, isLoading } = useSiteReport(siteId, startDate, endDate);
+
+  const handleExport = async (type: ReportEntry['type']) => {
+    const exporter = EXPORTERS[type];
+    if (!exporter) return;
+    try {
+      await exporter(siteId, startDate, endDate);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CSV');
+    }
+  };
 
   const groups = TYPE_ORDER.filter((type) => !excludeTypes.includes(type))
     .map((type) => ({
@@ -99,7 +127,12 @@ export function SiteReportView({ siteId, onClose, excludeTypes = [] }: SiteRepor
         ) : (
           <div className="space-y-2">
             {groups.map(({ type, entries: groupEntries }) => (
-              <CategoryRow key={type} type={type} entries={groupEntries} />
+              <CategoryRow
+                key={type}
+                type={type}
+                entries={groupEntries}
+                onExport={EXPORTERS[type] ? () => handleExport(type) : undefined}
+              />
             ))}
           </div>
         )}

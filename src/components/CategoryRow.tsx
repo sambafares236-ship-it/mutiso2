@@ -89,6 +89,13 @@ interface CategoryRowProps {
    * (which can browse any date range) rather than show a small inline
    * popover of just today's entries. */
   onClick?: () => void;
+  /** When provided, the popover header gets a "download CSV" button that
+   * calls this with the currently-selected date range - only wired up by
+   * SiteReportView for categories that have a real CSV export defined
+   * (see src/lib/csvExports.ts). Not used by the Overview's compact
+   * preview (that one always uses onClick instead, so this never applies
+   * there anyway). */
+  onExport?: () => void;
 }
 
 function groupByDate(entries: ReportEntry[]) {
@@ -110,7 +117,7 @@ function formatDateHeader(day: string) {
 // Site Report view and the Overview page's compact history preview so
 // both render identically and share one source of truth for the color
 // mapping - editing the palette in one place updates both surfaces.
-export function CategoryRow({ type, entries, compact = false, onClick }: CategoryRowProps) {
+export function CategoryRow({ type, entries, compact = false, onClick, onExport }: CategoryRowProps) {
   const Icon = TYPE_ICON[type];
   const colorVar = `var(--${TYPE_COLOR_VAR[type]})`;
 
@@ -150,7 +157,20 @@ export function CategoryRow({ type, entries, compact = false, onClick }: Categor
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-80 max-h-96 overflow-y-auto p-2" align="start">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1 pb-1.5">{TYPE_LABEL[type]}</p>
+        <div className="flex items-center justify-between px-1 pb-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{TYPE_LABEL[type]}</p>
+          {onExport && (
+            <button
+              type="button"
+              onClick={onExport}
+              className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+              title={`Export ${TYPE_LABEL[type]} as CSV`}
+            >
+              <Download className="w-3 h-3" />
+              CSV
+            </button>
+          )}
+        </div>
         {type === 'photo' ? (
           <div className="space-y-3">
             {groupByDate(entries).map(([day, dayEntries]) => (
