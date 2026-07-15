@@ -175,3 +175,7 @@ The approved plan (`elegant-imagining-lynx.md` under `~/.claude/plans/`) is now 
 - Don't offline-queue an UPDATE or RPC that targets a specific row's id if that id could itself belong to a not-yet-synced queued insert — see "Referential availability" above for why visitor sign-out isn't queued even though sign-in is.
 - Don't reach for a `notifications`-table trigger or `pg_cron` for a simple "expiring within N days" badge — compute it client-side (`isExpiringSoon()`) like insurance/certification expiry already does, and only add scheduled jobs when there's a real push/email requirement to justify the added infrastructure.
 - Don't create a new "report an issue" table without first checking whether `incident_log`'s open-ended `category` column already fits — Stage 7's dust/noise/spill reporting reused it entirely rather than duplicating the table + notification trigger.
+
+## Issues Log
+
+Check and update `ISSUES.md` (project root) during sessions — it tracks open bugs/issues/things-to-follow-up-on across sessions so they don't rely on memory. Add new findings there as they come up, and move resolved items to its "Resolved" section with a one-line fix note.

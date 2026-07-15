@@ -225,15 +225,27 @@ function ContractorView() {
     <div className="space-y-6 w-full max-w-lg">
       {!isLoading && !hasActiveSite && (
         <div className="card-industrial p-4 border-2 border-primary flex items-start gap-3">
-          <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-foreground">Waiting on admin approval</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {sites?.length
-                ? "Your site(s) are pending review. Management features (Overview, Pay/Renew, invites, permits) unlock once an admin approves at least one site."
-                : 'Create your first site below to get started - an admin needs to approve it before you can manage it.'}
-            </p>
-          </div>
+          {sites?.length ? (
+            <>
+              <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">Waiting on admin approval</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your site(s) are pending review. Management features (Overview, Pay/Renew, invites, permits) unlock once an admin approves at least one site.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Building className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">Get started</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Create your first site below to get started - an admin needs to approve it before you can manage it.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       )}
 
