@@ -80,3 +80,64 @@ export function useRejectSite() {
     },
   });
 }
+
+export interface ClientSite extends Site {
+  foreman_count: number;
+}
+
+export interface ClientRosterEntry {
+  owner_id: string;
+  owner_name: string | null;
+  owner_email: string | null;
+  owner_phone: string | null;
+  sites: ClientSite[];
+}
+
+// One row per contractor (owner_id), not per site - a contractor can own
+// several sites and the super admin needs to see them as one client. Sites
+// and foreman-assignment counts are fetched in bulk (2 extra queries total,
+// not one per client) then grouped/joined client-side, same shape as
+// usePendingSites' owner lookup above.
+export function useClientRoster() {
+  return useQuery({
+    queryKey: ['clientRoster'],
+    queryFn: async (): Promise<ClientRosterEntry[]> => {
+      const { data: sites, error } = await supabase
+        .from('sites')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!sites?.length) return [];
+
+      const ownerIds = [...new Set(sites.map((s) => s.owner_id))];
+      const siteIds = sites.map((s) => s.id);
+
+      const [{ data: profiles }, { data: assignments }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, email_address, phone_number').in('id', ownerIds),
+        supabase.from('site_assignments').select('site_id').eq('is_active', true).in('site_id', siteIds),
+      ]);
+
+      const foremanCounts = new Map<string, number>();
+      for (const a of assignments ?? []) {
+        foremanCounts.set(a.site_id, (foremanCounts.get(a.site_id) ?? 0) + 1);
+      }
+
+      const byOwner = new Map<string, ClientRosterEntry>();
+      for (const site of sites) {
+        if (!byOwner.has(site.owner_id)) {
+          const owner = profiles?.find((p) => p.id === site.owner_id);
+          byOwner.set(site.owner_id, {
+            owner_id: site.owner_id,
+            owner_name: owner?.full_name ?? null,
+            owner_email: owner?.email_address ?? null,
+            owner_phone: owner?.phone_number ?? null,
+            sites: [],
+          });
+        }
+        byOwner.get(site.owner_id)!.sites.push({ ...site, foreman_count: foremanCounts.get(site.id) ?? 0 });
+      }
+
+      return [...byOwner.values()];
+    },
+  });
+}

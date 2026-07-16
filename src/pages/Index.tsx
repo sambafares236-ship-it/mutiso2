@@ -4,11 +4,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
-import { usePendingSites, useApproveSite, useRejectSite } from '@/hooks/useSuperAdmin';
+import { usePendingSites, useApproveSite, useRejectSite, useClientRoster, type ClientRosterEntry } from '@/hooks/useSuperAdmin';
+import { isExpiringSoon } from '@/hooks/useCertifications';
 import { useSitePermits, useDecidePermit, PERMIT_TYPE_LABELS } from '@/hooks/usePermits';
 import { usePendingManualPayments, useConfirmManualPayment } from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
@@ -435,6 +436,123 @@ function PendingManualPayments() {
   );
 }
 
+function statusPillClasses(status: string) {
+  if (status === 'active') return 'bg-success/15 text-success';
+  if (status === 'pending') return 'bg-secondary text-muted-foreground';
+  return 'bg-destructive/15 text-destructive';
+}
+
+function ClientRow({ client }: { client: ClientRosterEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const activeSites = client.sites.filter((s) => s.status === 'active');
+  const overallStatus = activeSites.length
+    ? 'active'
+    : client.sites.some((s) => s.status === 'pending')
+      ? 'pending'
+      : 'cancelled';
+  const foremanTotal = client.sites.reduce((sum, s) => sum + s.foreman_count, 0);
+  const nearestExpiry =
+    activeSites
+      .map((s) => s.subscription_end)
+      .filter((d): d is string => !!d)
+      .sort()[0] ?? null;
+
+  return (
+    <div className="card-industrial p-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-start justify-between gap-2 text-left"
+      >
+        <div>
+          <p className="font-medium text-foreground">{client.owner_name ?? 'Unknown'}</p>
+          <p className="text-xs text-muted-foreground">{client.owner_email ?? 'no email'}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${statusPillClasses(overallStatus)}`}>
+            {overallStatus}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+        <span>
+          {client.sites.length} site{client.sites.length === 1 ? '' : 's'}
+        </span>
+        <span>
+          {foremanTotal} {foremanTotal === 1 ? 'foreman' : 'foremen'}
+        </span>
+        {nearestExpiry && (
+          <span className={isExpiringSoon(nearestExpiry) ? 'text-destructive' : undefined}>
+            Next renewal {new Date(nearestExpiry).toLocaleDateString('en-KE')}
+          </span>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
+          {client.sites.map((site) => (
+            <div key={site.id} className="flex items-center justify-between gap-2 text-sm">
+              <div>
+                <p className="text-foreground">{site.site_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {TIER_LABEL[site.subscription_tier as 'field_ops' | 'pro']}
+                  {site.whatsapp_bot_enabled ? ' + WhatsApp Bot' : ''} · {site.foreman_count}{' '}
+                  {site.foreman_count === 1 ? 'foreman' : 'foremen'}
+                </p>
+                {site.subscription_end && (
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(site.subscription_end) < new Date() ? 'Expired' : 'Renews'}{' '}
+                    {new Date(site.subscription_end).toLocaleDateString('en-KE')}
+                  </p>
+                )}
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusPillClasses(site.status)}`}>
+                {site.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientRosterView() {
+  const { data: clients, isLoading } = useClientRoster();
+
+  return (
+    <div className="space-y-4 w-full max-w-lg">
+      <h2 className="font-display text-xl text-foreground flex items-center gap-2">
+        <Users className="w-5 h-5 text-primary" /> Clients
+      </h2>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+        </div>
+      ) : !clients?.length ? (
+        <p className="text-sm text-muted-foreground">No clients yet.</p>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            {clients.length} client{clients.length === 1 ? '' : 's'} ·{' '}
+            {clients.filter((c) => c.sites.some((s) => s.status === 'active')).length} active
+          </p>
+          <div className="space-y-3">
+            {clients.map((client) => (
+              <ClientRow key={client.owner_id} client={client} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SuperAdminView() {
   const { data: pendingSites, isLoading } = usePendingSites();
   const approveSite = useApproveSite();
@@ -460,6 +578,8 @@ function SuperAdminView() {
 
   return (
     <div className="space-y-8 w-full max-w-lg">
+      <ClientRosterView />
+
       <PendingManualPayments />
 
       <div className="space-y-4 w-full max-w-lg">
