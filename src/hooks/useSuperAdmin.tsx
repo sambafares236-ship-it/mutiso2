@@ -83,6 +83,7 @@ export function useRejectSite() {
 
 export interface ClientSite extends Site {
   foreman_count: number;
+  total_paid: number;
 }
 
 export interface ClientRosterEntry {
@@ -94,10 +95,10 @@ export interface ClientRosterEntry {
 }
 
 // One row per contractor (owner_id), not per site - a contractor can own
-// several sites and the super admin needs to see them as one client. Sites
-// and foreman-assignment counts are fetched in bulk (2 extra queries total,
-// not one per client) then grouped/joined client-side, same shape as
-// usePendingSites' owner lookup above.
+// several sites and the super admin needs to see them as one client. Sites,
+// foreman-assignment counts, and completed-payment totals are all fetched in
+// bulk (3 extra queries total, not one per client/site) then grouped/joined
+// client-side, same shape as usePendingSites' owner lookup above.
 export function useClientRoster() {
   return useQuery({
     queryKey: ['clientRoster'],
@@ -112,14 +113,20 @@ export function useClientRoster() {
       const ownerIds = [...new Set(sites.map((s) => s.owner_id))];
       const siteIds = sites.map((s) => s.id);
 
-      const [{ data: profiles }, { data: assignments }] = await Promise.all([
+      const [{ data: profiles }, { data: assignments }, { data: payments }] = await Promise.all([
         supabase.from('profiles').select('id, full_name, email_address, phone_number').in('id', ownerIds),
         supabase.from('site_assignments').select('site_id').eq('is_active', true).in('site_id', siteIds),
+        supabase.from('subscription_payment').select('site_id, amount').eq('status', 'completed').in('site_id', siteIds),
       ]);
 
       const foremanCounts = new Map<string, number>();
       for (const a of assignments ?? []) {
         foremanCounts.set(a.site_id, (foremanCounts.get(a.site_id) ?? 0) + 1);
+      }
+
+      const paidTotals = new Map<string, number>();
+      for (const p of payments ?? []) {
+        paidTotals.set(p.site_id, (paidTotals.get(p.site_id) ?? 0) + p.amount);
       }
 
       const byOwner = new Map<string, ClientRosterEntry>();
@@ -134,7 +141,11 @@ export function useClientRoster() {
             sites: [],
           });
         }
-        byOwner.get(site.owner_id)!.sites.push({ ...site, foreman_count: foremanCounts.get(site.id) ?? 0 });
+        byOwner.get(site.owner_id)!.sites.push({
+          ...site,
+          foreman_count: foremanCounts.get(site.id) ?? 0,
+          total_paid: paidTotals.get(site.id) ?? 0,
+        });
       }
 
       return [...byOwner.values()];

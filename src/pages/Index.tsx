@@ -4,14 +4,14 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
 import { usePendingSites, useApproveSite, useRejectSite, useClientRoster, type ClientRosterEntry } from '@/hooks/useSuperAdmin';
 import { isExpiringSoon } from '@/hooks/useCertifications';
 import { useSitePermits, useDecidePermit, PERMIT_TYPE_LABELS } from '@/hooks/usePermits';
-import { usePendingManualPayments, useConfirmManualPayment } from '@/hooks/useSubscriptionPayment';
+import { usePendingManualPayments, useConfirmManualPayment, useRevenueSummary } from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -507,6 +507,7 @@ function ClientRow({ client }: { client: ClientRosterEntry }) {
                     {new Date(site.subscription_end).toLocaleDateString('en-KE')}
                   </p>
                 )}
+                <p className="text-xs text-success mt-0.5">Paid to date: {formatKES(site.total_paid)}</p>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusPillClasses(site.status)}`}>
                 {site.status}
@@ -553,6 +554,50 @@ function ClientRosterView() {
   );
 }
 
+function RevenueSummaryView() {
+  const { data, isLoading } = useRevenueSummary();
+
+  return (
+    <div className="space-y-4 w-full max-w-lg">
+      <h2 className="font-display text-xl text-foreground flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 text-primary" /> Revenue Collected
+      </h2>
+
+      {isLoading ? (
+        <Skeleton className="h-24 w-full rounded-xl" />
+      ) : (
+        <>
+          <div className="card-industrial p-4">
+            <p className="text-xs text-muted-foreground">Total revenue collected</p>
+            <p className="font-display text-3xl text-success">{formatKES(data?.total ?? 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data?.payments.length ?? 0} payment{data?.payments.length === 1 ? '' : 's'}
+            </p>
+          </div>
+
+          {!!data?.payments.length && (
+            <div className="space-y-2">
+              {data.payments.map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between gap-2 card-industrial p-3 text-sm">
+                  <div>
+                    <p className="text-foreground">{payment.site_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {payment.payment_method === 'manual' ? 'Manual M-Pesa' : 'M-Pesa STK'}
+                      {payment.includes_bot ? ' + WhatsApp Bot' : ''}
+                      {payment.completed_at && ` · ${new Date(payment.completed_at).toLocaleDateString('en-KE')}`}
+                    </p>
+                  </div>
+                  <p className="font-medium text-success shrink-0">{formatKES(payment.amount)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function SuperAdminView() {
   const { data: pendingSites, isLoading } = usePendingSites();
   const approveSite = useApproveSite();
@@ -579,6 +624,8 @@ function SuperAdminView() {
   return (
     <div className="space-y-8 w-full max-w-lg">
       <ClientRosterView />
+
+      <RevenueSummaryView />
 
       <PendingManualPayments />
 

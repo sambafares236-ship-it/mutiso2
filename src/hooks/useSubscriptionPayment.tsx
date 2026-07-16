@@ -71,6 +71,8 @@ export function useInvalidateSitesAfterPayment() {
     queryClient.invalidateQueries({ queryKey: ['adminSites'] });
     queryClient.invalidateQueries({ queryKey: ['pendingSites'] });
     queryClient.invalidateQueries({ queryKey: ['pendingManualPayments'] });
+    queryClient.invalidateQueries({ queryKey: ['revenueSummary'] });
+    queryClient.invalidateQueries({ queryKey: ['clientRoster'] });
   };
 }
 
@@ -117,6 +119,36 @@ export function usePendingManualPayments() {
   });
 }
 
+export interface CompletedPayment extends SubscriptionPayment {
+  site_name: string;
+}
+
+// All-time completed payments across every client (super admin only - RLS
+// restricts this table to a site's own owner or an admin/super_admin role).
+// Total revenue is derived client-side from the same list rather than a
+// separate aggregate query, since the transaction list is already needed for
+// display and the row count here is not large enough to warrant a
+// server-side sum.
+export function useRevenueSummary() {
+  return useQuery({
+    queryKey: ['revenueSummary'],
+    queryFn: async (): Promise<{ total: number; payments: CompletedPayment[] }> => {
+      const { data, error } = await supabase
+        .from('subscription_payment')
+        .select('*, sites(site_name)')
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
+      if (error) throw error;
+      const payments = (data ?? []).map((row) => {
+        const { sites, ...rest } = row as typeof row & { sites: { site_name: string } | null };
+        return { ...rest, site_name: sites?.site_name ?? 'Unknown site' } as CompletedPayment;
+      });
+      const total = payments.reduce((sum, p) => sum + p.amount, 0);
+      return { total, payments };
+    },
+  });
+}
+
 export function useConfirmManualPayment() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -131,6 +163,8 @@ export function useConfirmManualPayment() {
       queryClient.invalidateQueries({ queryKey: ['pendingManualPayments'] });
       queryClient.invalidateQueries({ queryKey: ['adminSites'] });
       queryClient.invalidateQueries({ queryKey: ['pendingSites'] });
+      queryClient.invalidateQueries({ queryKey: ['revenueSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['clientRoster'] });
     },
   });
 }
