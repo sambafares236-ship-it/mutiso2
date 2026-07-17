@@ -1,0 +1,97 @@
+{
+  "name": "Certification & Insurance Expiring Digest (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "days", "daysInterval": 1, "triggerAtHour": 7, "triggerAtMinute": 0 }]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Expiring Items",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 400],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with items as (\n  select\n    s.owner_id,\n    s.site_name,\n    c.cert_name || ' (' || coalesce(wm.full_name, ti.tool_name) || ')' as label,\n    c.expiry_date\n  from certification c\n  join sites s on s.id = c.site_id and s.status = 'active'\n  left join workers_master wm on wm.id = c.worker_id\n  left join tool_inventory ti on ti.id = c.tool_id\n  where c.expiry_date <= current_date + interval '30 days'\n\n  union all\n\n  select\n    s.owner_id,\n    s.site_name,\n    sc.company_name || ' insurance' as label,\n    sc.insurance_expiry as expiry_date\n  from subcontractor sc\n  join sites s on s.id = sc.site_id and s.status = 'active'\n  where sc.insurance_expiry is not null\n    and sc.insurance_expiry <= current_date + interval '30 days'\n)\nselect\n  i.owner_id,\n  p.phone_number as owner_phone,\n  count(*) as item_count,\n  string_agg(\n    '- ' || i.site_name || ': ' || i.label || ' - ' ||\n    case when i.expiry_date < current_date\n         then 'EXPIRED ' || to_char(i.expiry_date, 'DD Mon YYYY')\n         else 'expires ' || to_char(i.expiry_date, 'DD Mon YYYY')\n    end,\n    E'\\n' order by i.expiry_date\n  ) as digest_body\nfrom items i\njoin profiles p on p.id = i.owner_id\ngroup by i.owner_id, p.phone_number;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [660, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📄 *Certification & Insurance Expiry Digest*\\n\\n\" + $json.item_count + \" item(s) expiring within 30 days:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review and renew.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule": { "main": [[{ "node": "Get Expiring Items", "type": "main", "index": 0 }]] },
+    "Get Expiring Items": { "main": [[{ "node": "Has Phone", "type": "main", "index": 0 }]] },
+    "Has Phone": { "main": [[{ "node": "Send WhatsApp Digest", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

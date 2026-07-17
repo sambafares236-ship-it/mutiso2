@@ -1,0 +1,97 @@
+{
+  "name": "Weekly Site Digest (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Monday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [1], "triggerAtHour": 8, "triggerAtMinute": 0 }]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Site Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 400],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with site_stats as (\n  select\n    s.id as site_id,\n    s.site_name,\n    s.owner_id,\n    (select count(*) from attendance_log al where al.site_id = s.id and al.date between (date_trunc('week', current_date) - interval '7 days')::date and (date_trunc('week', current_date) - interval '1 day')::date) as attendance_days,\n    (select count(*) from site_diary_log sd where sd.site_id = s.id and sd.date between (date_trunc('week', current_date) - interval '7 days')::date and (date_trunc('week', current_date) - interval '1 day')::date) as diary_count,\n    (select count(*) from defect_log d where d.site_id = s.id and d.created_at::date between (date_trunc('week', current_date) - interval '7 days')::date and (date_trunc('week', current_date) - interval '1 day')::date) as defects_opened,\n    (select count(*) from defect_log d where d.site_id = s.id and d.status = 'resolved' and d.verified_at::date between (date_trunc('week', current_date) - interval '7 days')::date and (date_trunc('week', current_date) - interval '1 day')::date) as defects_closed,\n    (select count(*) from site_milestone m where m.site_id = s.id and m.status = 'completed' and m.signed_off_at::date between (date_trunc('week', current_date) - interval '7 days')::date and (date_trunc('week', current_date) - interval '1 day')::date) as milestones_completed\n  from sites s\n  where s.status = 'active'\n)\nselect ss.site_name, p.phone_number as owner_phone, ss.attendance_days, ss.diary_count, ss.defects_opened, ss.defects_closed, ss.milestones_completed,\n  to_char((date_trunc('week', current_date) - interval '7 days')::date, 'DD Mon') as week_start,\n  to_char((date_trunc('week', current_date) - interval '1 day')::date, 'DD Mon YYYY') as week_end\nfrom site_stats ss\njoin profiles p on p.id = ss.owner_id\nwhere ss.attendance_days > 0 or ss.diary_count > 0 or ss.defects_opened > 0 or ss.defects_closed > 0 or ss.milestones_completed > 0;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [660, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📊 *Weekly Site Digest — \" + $json.site_name + \"*\\n\" + $json.week_start + \" - \" + $json.week_end + \"\\n\\n• Attendance marks: \" + $json.attendance_days + \"\\n• New diary entries: \" + $json.diary_count + \"\\n• Defects opened: \" + $json.defects_opened + \"\\n• Defects closed: \" + $json.defects_closed + \"\\n• Milestones completed: \" + $json.milestones_completed + \"\\n\\nOpen Mutiso.AI for details.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Monday Schedule": { "main": [[{ "node": "Get Site Stats", "type": "main", "index": 0 }]] },
+    "Get Site Stats": { "main": [[{ "node": "Has Phone", "type": "main", "index": 0 }]] },
+    "Has Phone": { "main": [[{ "node": "Send WhatsApp Digest", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

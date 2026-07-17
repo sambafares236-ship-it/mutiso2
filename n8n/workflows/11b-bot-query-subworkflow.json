@@ -1,0 +1,47 @@
+{
+  "name": "Bot Query Data (Sub-Workflow)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "query_type", "type": "string" },
+            { "name": "site_id", "type": "string" },
+            { "name": "date_range_days", "type": "number" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Run Bot Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select public.bot_query_site_data($1, $2, $3) as result",
+        "options": { "queryReplacement": "={{ [$json.query_type, $json.site_id, $json.date_range_days || 30] }}" }
+      },
+      "credentials": {
+        "postgres": { "id": "LI49jpFJOx2PbcBp", "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)" }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Run Bot Query", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

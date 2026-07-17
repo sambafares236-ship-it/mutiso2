@@ -1,0 +1,166 @@
+{
+  "name": "Permit Request Notification (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Permit Requested Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "permit-requested",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Webhook Secret",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select decrypted_secret from vault.decrypted_secrets where name = 'permit_requested_webhook_secret' limit 1",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Verify Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.decrypted_secret }}",
+              "rightValue": "={{ $('Permit Requested Webhook').item.json.headers['x-webhook-secret'] }}",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Unauthorized Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [660, 450],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\": \"invalid webhook secret\"}",
+        "options": { "responseCode": 401 }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [660, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $('Permit Requested Webhook').item.json.body.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [880, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $('Permit Requested Webhook').item.json.body.owner_phone.replace(/\\D/g, ''), \"text\": \"📋 *Permit-to-Work Requested*\\n\\nSite: \" + $('Permit Requested Webhook').item.json.body.site_name + \"\\nType: \" + $('Permit Requested Webhook').item.json.body.permit_type + \"\\nRequested by: \" + ($('Permit Requested Webhook').item.json.body.requested_by_name || 'n/a') + \"\\nValid: \" + ($('Permit Requested Webhook').item.json.body.valid_from || 'n/a') + \" to \" + ($('Permit Requested Webhook').item.json.body.valid_to || 'n/a') + \"\\n\\n\" + ($('Permit Requested Webhook').item.json.body.description || '') + \"\\n\\nOpen Mutiso.AI to review and approve/reject.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    },
+    {
+      "id": "n7",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1100, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"sent\"}",
+        "options": { "responseCode": 200 }
+      }
+    },
+    {
+      "id": "n8",
+      "name": "No Phone Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [880, 450],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"skipped\", \"reason\": \"owner has no phone number on file\"}",
+        "options": { "responseCode": 200 }
+      }
+    }
+  ],
+  "connections": {
+    "Permit Requested Webhook": { "main": [[{ "node": "Get Webhook Secret", "type": "main", "index": 0 }]] },
+    "Get Webhook Secret": { "main": [[{ "node": "Verify Secret", "type": "main", "index": 0 }]] },
+    "Verify Secret": {
+      "main": [
+        [{ "node": "Has Phone", "type": "main", "index": 0 }],
+        [{ "node": "Unauthorized Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Phone": {
+      "main": [
+        [{ "node": "Send WhatsApp Alert", "type": "main", "index": 0 }],
+        [{ "node": "No Phone Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send WhatsApp Alert": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

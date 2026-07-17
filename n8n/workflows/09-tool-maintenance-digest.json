@@ -1,0 +1,97 @@
+{
+  "name": "Tool & Maintenance Digest (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Wednesday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [3], "triggerAtHour": 7, "triggerAtMinute": 0 }]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Tool Issues",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 400],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with overdue_checkouts as (\n  select tcl.site_id, s.owner_id, s.site_name, ti.tool_name, tcl.checked_out_to, tcl.checked_out_at\n  from tool_checkout_log tcl\n  join tool_inventory ti on ti.id = tcl.tool_id\n  join sites s on s.id = tcl.site_id and s.status = 'active'\n  where tcl.returned_at is null\n    and tcl.checked_out_at < now() - interval '7 days'\n),\nlatest_maintenance as (\n  select distinct on (tool_id) tool_id, next_due_date\n  from equipment_maintenance_log\n  where next_due_date is not null\n  order by tool_id, performed_at desc\n),\nmaintenance_due as (\n  select ti.site_id, s.owner_id, s.site_name, ti.tool_name, lm.next_due_date\n  from latest_maintenance lm\n  join tool_inventory ti on ti.id = lm.tool_id\n  join sites s on s.id = ti.site_id and s.status = 'active'\n  where lm.next_due_date <= current_date + interval '7 days'\n),\ncombined as (\n  select owner_id, site_name,\n    ('Overdue checkout: ' || tool_name || ' (out to ' || checked_out_to || ' since ' || to_char(checked_out_at, 'DD Mon') || ')') as line\n  from overdue_checkouts\n  union all\n  select owner_id, site_name,\n    ('Maintenance due: ' || tool_name || ' (' || (case when next_due_date < current_date then 'OVERDUE ' else 'due ' end) || to_char(next_due_date, 'DD Mon YYYY') || ')') as line\n  from maintenance_due\n)\nselect\n  c.owner_id,\n  p.phone_number as owner_phone,\n  count(*) as item_count,\n  string_agg('- ' || c.site_name || ': ' || c.line, E'\\n' order by c.site_name) as digest_body\nfrom combined c\njoin profiles p on p.id = c.owner_id\ngroup by c.owner_id, p.phone_number;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [660, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"🛠️ *Tool & Maintenance Digest*\\n\\n\" + $json.item_count + \" item(s) needing attention:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Wednesday Schedule": { "main": [[{ "node": "Get Tool Issues", "type": "main", "index": 0 }]] },
+    "Get Tool Issues": { "main": [[{ "node": "Has Phone", "type": "main", "index": 0 }]] },
+    "Has Phone": { "main": [[{ "node": "Send WhatsApp Digest", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

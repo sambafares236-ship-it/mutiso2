@@ -1,0 +1,97 @@
+{
+  "name": "Budget Overrun Alert (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Tuesday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [2], "triggerAtHour": 7, "triggerAtMinute": 0 }]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Overrun Categories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 400],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with budget as (\n  select site_id, category, sum(budgeted_amount) as budgeted_amount\n  from budget_line\n  group by site_id, category\n),\nactuals as (\n  select site_id, cost_type as category, amount as actual_amount\n  from actual_cost\n  union all\n  select pr.site_id, 'labor' as category, pl.gross_amount as actual_amount\n  from payroll_run pr\n  join payroll_line pl on pl.payroll_run_id = pr.id\n),\nactuals_agg as (\n  select site_id, category, sum(actual_amount) as actual_amount\n  from actuals\n  group by site_id, category\n),\nflagged as (\n  select\n    s.owner_id,\n    s.site_name,\n    b.category,\n    b.budgeted_amount,\n    coalesce(a.actual_amount,0) as actual_amount,\n    round(coalesce(a.actual_amount,0) / nullif(b.budgeted_amount,0) * 100, 1) as pct_spent\n  from budget b\n  join sites s on s.id = b.site_id and s.status = 'active'\n  left join actuals_agg a on a.site_id = b.site_id and a.category = b.category\n  where b.budgeted_amount > 0\n    and coalesce(a.actual_amount,0) / nullif(b.budgeted_amount,0) >= 0.9\n)\nselect\n  f.owner_id,\n  p.phone_number as owner_phone,\n  count(*) as flagged_count,\n  string_agg(\n    '- ' || f.site_name || ' (' || f.category || '): KES ' || to_char(f.actual_amount, 'FM999,999,999') || ' / KES ' || to_char(f.budgeted_amount, 'FM999,999,999') || ' (' || f.pct_spent || '%)',\n    E'\\n' order by f.pct_spent desc\n  ) as digest_body\nfrom flagged f\njoin profiles p on p.id = f.owner_id\ngroup by f.owner_id, p.phone_number;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [660, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"⚠️ *Budget Overrun Alert*\\n\\n\" + $json.flagged_count + \" budget line(s) at or above 90% spent:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Tuesday Schedule": { "main": [[{ "node": "Get Overrun Categories", "type": "main", "index": 0 }]] },
+    "Get Overrun Categories": { "main": [[{ "node": "Has Phone", "type": "main", "index": 0 }]] },
+    "Has Phone": { "main": [[{ "node": "Send WhatsApp Alert", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

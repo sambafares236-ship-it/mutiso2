@@ -20,7 +20,6 @@ export function useCreateInvite() {
     mutationFn: async ({
       site_id,
       email,
-      site_name,
     }: {
       site_id: string;
       email: string;
@@ -28,6 +27,10 @@ export function useCreateInvite() {
     }) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Email delivery is handled server-side by the invites table's
+      // on_invite_insert_notify trigger (n8n + Gmail), not from here - a
+      // fire-and-forget client call couldn't survive the tab closing
+      // before it landed. See 20260731090300_notify_on_invite_created.sql.
       const { data, error } = await supabase
         .from('invites')
         .insert({ site_id, invited_by: user.id, email })
@@ -35,19 +38,6 @@ export function useCreateInvite() {
         .single();
 
       if (error) throw error;
-
-      // Best-effort - a delivery failure shouldn't block invite creation,
-      // the contractor can still copy/share the link manually. Errors are
-      // logged, not surfaced as a toast failure for the whole action.
-      supabase.functions
-        .invoke('send-invite-email', {
-          body: {
-            to: email,
-            site_name,
-            join_url: `${window.location.origin}/join?token=${data.token}`,
-          },
-        })
-        .catch((err) => console.warn('send-invite-email failed', err));
 
       return data as Invite;
     },

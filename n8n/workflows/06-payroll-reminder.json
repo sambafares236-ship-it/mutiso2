@@ -1,0 +1,97 @@
+{
+  "name": "Weekly Payroll Reminder (WhatsApp)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Monday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [1], "triggerAtHour": 7, "triggerAtMinute": 0 }]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Get Sites Missing Payroll",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [220, 400],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with week as (\n  select (date_trunc('week', current_date) - interval '7 days')::date as week_start,\n         (date_trunc('week', current_date) - interval '1 day')::date as week_end\n),\nmissing as (\n  select s.owner_id, s.site_name\n  from sites s, week w\n  where s.status = 'active'\n    and exists (\n      select 1 from attendance_log al\n      where al.site_id = s.id and al.date between w.week_start and w.week_end\n    )\n    and not exists (\n      select 1 from payroll_run pr\n      where pr.site_id = s.id and pr.week_start = w.week_start\n    )\n)\nselect\n  m.owner_id,\n  p.phone_number as owner_phone,\n  string_agg(m.site_name, ', ' order by m.site_name) as site_names,\n  count(*) as site_count,\n  (select to_char(week_start, 'DD Mon YYYY') from week) as week_start,\n  (select to_char(week_end, 'DD Mon YYYY') from week) as week_end\nfrom missing m\njoin profiles p on p.id = m.owner_id\ngroup by m.owner_id, p.phone_number;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "LI49jpFJOx2PbcBp",
+          "name": "Supabase Dev (mutiso-v2 kmcgcqnuxixsxqwigfir)"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Has Phone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Send WhatsApp Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [660, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "ngrok-skip-browser-warning", "value": "true" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"💰 *Payroll Reminder*\\n\\nYou haven't run payroll yet for the week of \" + $json.week_start + \" - \" + $json.week_end + \" for \" + $json.site_count + \" site(s): \" + $json.site_names + \".\\n\\nOpen Mutiso.AI to generate payroll.\" } }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vpRac8Wc96KOUhNz",
+          "name": "Evolution API (mutiso-test5)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Monday Schedule": { "main": [[{ "node": "Get Sites Missing Payroll", "type": "main", "index": 0 }]] },
+    "Get Sites Missing Payroll": { "main": [[{ "node": "Has Phone", "type": "main", "index": 0 }]] },
+    "Has Phone": { "main": [[{ "node": "Send WhatsApp Reminder", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}
