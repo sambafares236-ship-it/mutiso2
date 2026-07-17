@@ -348,14 +348,29 @@ function ContractorView() {
                     )}
                   </>
                 ) : (
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-3 space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       {site.status === 'pending'
                         ? 'Awaiting payment confirmation and admin approval.'
                         : 'This site was not approved.'}
                     </div>
-                    {site.status === 'pending' && <SitePaymentStatusLine siteId={site.id} />}
+                    {site.status === 'pending' && (
+                      <>
+                        <SitePaymentStatusLine siteId={site.id} />
+                        {/* Covers sites created before payment-gated onboarding existed,
+                            which have no payment record at all yet - request_manual_subscription_payment()
+                            authorizes on ownership alone (is_site_owner()), not owns_site(),
+                            specifically so this works for a still-pending site. */}
+                        <Button
+                          size="sm"
+                          variant="construction"
+                          onClick={() => setPaySite({ id: site.id, site_name: site.site_name, subscription_tier: tier })}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" /> Pay Now
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
