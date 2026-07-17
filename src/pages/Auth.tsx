@@ -10,20 +10,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PasswordInput } from '@/components/PasswordInput';
 import { HardHat, Loader2 } from 'lucide-react';
 import { normalizeKenyanPhone } from '@/lib/phone';
 
-type Mode = 'signup' | 'signin';
+type Mode = 'signup' | 'signin' | 'forgot';
 
 const schema = z.object({
   full_name: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirm_password: z.string().optional(),
   phone_number: z.string().optional(),
   agreed_to_terms: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
+
+const forgotSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+});
+type ForgotValues = z.infer<typeof forgotSchema>;
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -37,6 +44,12 @@ export default function Auth() {
     control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const {
+    register: registerForgot,
+    handleSubmit: handleForgotSubmit,
+    formState: { errors: forgotErrors, isSubmitting: isForgotSubmitting },
+  } = useForm<ForgotValues>({ resolver: zodResolver(forgotSchema) });
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -54,6 +67,10 @@ export default function Auth() {
         const normalizedPhone = normalizeKenyanPhone(values.phone_number ?? '');
         if (!normalizedPhone) {
           setError('phone_number', { message: 'Enter a valid Kenyan phone number (e.g. 07XXXXXXXX)' });
+          return;
+        }
+        if (values.password !== values.confirm_password) {
+          setError('confirm_password', { message: 'Passwords do not match' });
           return;
         }
         if (!values.agreed_to_terms) {
@@ -83,6 +100,21 @@ export default function Auth() {
     }
   };
 
+  const onForgotSubmit = async (values: ForgotValues) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success('Check your email', {
+        description: `If an account exists for ${values.email}, a password reset link is on its way.`,
+      });
+      setMode('signin');
+    } catch (err) {
+      toast.error('Could not send reset link', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <div className="caution-stripe w-full fixed top-0 left-0" />
@@ -96,28 +128,63 @@ export default function Auth() {
           <p className="text-muted-foreground mt-1">Construction site management</p>
         </div>
 
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-              mode === 'signup' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Sign Up
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('signin')}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-              mode === 'signin' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Sign In
-          </button>
-        </div>
+        {mode !== 'forgot' && (
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMode('signup')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'signup' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Sign Up
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('signin')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'signin' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Sign In
+            </button>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {mode === 'forgot' && (
+          <form onSubmit={handleForgotSubmit(onForgotSubmit)} className="space-y-4" noValidate>
+            <div>
+              <p className="font-medium text-foreground">Reset your password</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Enter your account email and we'll send you a link to reset your password.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="forgot_email">Email</Label>
+              <Input id="forgot_email" type="email" placeholder="you@example.com" {...registerForgot('email')} />
+              {forgotErrors.email && <p className="text-xs text-destructive">{forgotErrors.email.message}</p>}
+            </div>
+            <Button type="submit" variant="construction" size="touch" className="w-full" disabled={isForgotSubmitting}>
+              {isForgotSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Sending...
+                </>
+              ) : (
+                'SEND RESET LINK'
+              )}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setMode('signin')}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
+
+        {mode !== 'forgot' && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {mode === 'signup' && (
             <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>
@@ -144,10 +211,29 @@ export default function Auth() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register('password')} />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={() => setMode('forgot')}
+                  className="text-xs text-primary hover:text-primary/80 underline"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <PasswordInput id="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} {...register('password')} />
             {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           </div>
+
+          {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="confirm_password">Confirm Password</Label>
+              <PasswordInput id="confirm_password" autoComplete="new-password" {...register('confirm_password')} />
+              {errors.confirm_password && <p className="text-xs text-destructive">{errors.confirm_password.message}</p>}
+            </div>
+          )}
 
           {mode === 'signup' && (
             <div className="space-y-1">
@@ -192,6 +278,7 @@ export default function Auth() {
             )}
           </Button>
         </form>
+        )}
       </div>
     </div>
   );

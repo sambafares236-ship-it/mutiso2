@@ -162,7 +162,15 @@ site_url = "https://mutisoai.vercel.app"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 # Includes both the deployed prod URL and localhost for local dev testing -
 # this same config.toml is pushed to both the dev and prod Supabase projects.
-additional_redirect_urls = ["http://localhost:8080", "https://mutisoai.vercel.app"]
+# The /reset-password entries are required for resetPasswordForEmail()'s
+# redirectTo (Auth.tsx's forgot-password flow) - these are *exact* URL
+# matches, not prefixes, so the bare-origin entries above don't also cover them.
+additional_redirect_urls = [
+  "http://localhost:8080",
+  "https://mutisoai.vercel.app",
+  "http://localhost:8080/reset-password",
+  "https://mutisoai.vercel.app/reset-password",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
