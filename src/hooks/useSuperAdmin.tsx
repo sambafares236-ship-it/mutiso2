@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Site } from './useSite';
-import { useAuth } from './useAuth';
 
 export interface PendingSite extends Site {
   owner_name: string | null;
   owner_email: string | null;
+  has_completed_payment: boolean;
 }
 
 export function usePendingSites() {
@@ -21,10 +21,13 @@ export function usePendingSites() {
       if (!data?.length) return [];
 
       const ownerIds = [...new Set(data.map((s) => s.owner_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, email_address')
-        .in('id', ownerIds);
+      const siteIds = data.map((s) => s.id);
+
+      const [{ data: profiles }, { data: payments }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, email_address').in('id', ownerIds),
+        supabase.from('subscription_payment').select('site_id').eq('status', 'completed').in('site_id', siteIds),
+      ]);
+      const paidSiteIds = new Set((payments ?? []).map((p) => p.site_id));
 
       return data.map((site) => {
         const owner = profiles?.find((p) => p.id === site.owner_id);
@@ -32,31 +35,23 @@ export function usePendingSites() {
           ...site,
           owner_name: owner?.full_name ?? null,
           owner_email: owner?.email_address ?? null,
+          has_completed_payment: paidSiteIds.has(site.id),
         };
       });
     },
   });
 }
 
+// Approval itself is now the trigger for the 1-month subscription clock
+// (subscription_start/end are set inside approve_site(), not by payment),
+// and the RPC blocks approval outright until a subscription_payment for the
+// site is 'completed' - see 20260731090500_gate_site_approval_on_payment.sql.
 export function useApproveSite() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (siteId: string) => {
-      if (!user) throw new Error('Not authenticated');
-      // No free trial - approval just marks the site as legitimate.
-      // subscription_start/subscription_end stay null until the first
-      // successful payment sets them (_extend_site_subscription), so the
-      // site has no usable period until it's actually paid for.
-      const { error } = await supabase
-        .from('sites')
-        .update({
-          status: 'active',
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', siteId);
+      const { error } = await supabase.rpc('approve_site', { p_site_id: siteId });
       if (error) throw error;
     },
     onSuccess: () => {

@@ -2179,6 +2179,7 @@ export type Database = {
         Args: { p_includes_bot: boolean; p_site_id: string }
         Returns: undefined
       }
+      approve_site: { Args: { p_site_id: string }; Returns: undefined }
       bot_query_site_data: {
         Args: {
           p_date_range_days?: number
@@ -2228,6 +2229,19 @@ export type Database = {
         Returns: undefined
       }
       consume_invite: { Args: { p_token: string }; Returns: string }
+      create_site_with_manual_payment: {
+        Args: {
+          p_includes_bot?: boolean
+          p_location?: string
+          p_mpesa_receipt_number?: string
+          p_site_name: string
+          p_subscription_tier?: string
+        }
+        Returns: {
+          payment_id: string
+          site_id: string
+        }[]
+      }
       create_toolbox_talk: {
         Args: {
           p_date: string
@@ -2259,6 +2273,14 @@ export type Database = {
         Returns: boolean
       }
       is_assigned_foreman: {
+        Args: { _site_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_assigned_foreman_of_pro_site: {
+        Args: { _site_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_site_owner: {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
@@ -2295,6 +2317,10 @@ export type Database = {
       }
       owns_payroll_run_site: {
         Args: { _payroll_run_id: string; _user_id: string }
+        Returns: boolean
+      }
+      owns_pro_site: {
+        Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
       owns_site: {

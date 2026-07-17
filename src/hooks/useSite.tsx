@@ -94,33 +94,6 @@ export function useSiteForeman(siteId: string | undefined) {
   });
 }
 
-// Hook to create a new site (contractor/admin only)
-export function useCreateSite() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (siteData: {
-      site_name: string;
-      location?: string;
-      description?: string;
-      subscription_tier: 'field_ops' | 'pro';
-    }) => {
-      if (!user) throw new Error('Not authenticated');
-      const { data, error } = await supabase
-        .from('sites')
-        .insert({ ...siteData, owner_id: user.id, status: 'pending' })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminSites'] });
-    },
-  });
-}
-
 // Hook to assign a foreman to a site (admin/contractor only). Deactivates
 // the foreman's previous assignment first; the DB-level partial unique
 // index (site_assignments_one_active_per_foreman) is the safety net if

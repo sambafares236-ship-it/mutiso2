@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useForemanSite } from '@/hooks/useSite';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { isSubscriptionExpired } from '@/hooks/useSubscriptionPayment';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -298,6 +299,25 @@ export default function ForemanDashboard() {
       <div className="card-industrial p-6 max-w-lg w-full text-center">
         <p className="font-medium text-foreground mb-1">No site assigned yet</p>
         <p className="text-sm text-muted-foreground">Contact your contractor for an invite link.</p>
+      </div>
+    );
+  }
+
+  // The "Assigned foremen can view their site" RLS policy checks
+  // site_assignments directly, not owns_site()/is_assigned_foreman() - so
+  // this row (and its status/subscription_end) stays visible even once the
+  // site is locked out, letting us show a clear reason instead of every
+  // tile below silently rendering empty from RLS-filtered queries.
+  if (site.status !== 'active' || isSubscriptionExpired(site.subscription_end)) {
+    return (
+      <div className="card-industrial p-6 max-w-lg w-full text-center">
+        <p className="font-medium text-foreground mb-1">Site access paused</p>
+        <p className="text-sm text-muted-foreground">
+          {site.status !== 'active'
+            ? 'This site is not currently active.'
+            : 'This site’s subscription has expired.'}{' '}
+          Talk to your contractor to restore access.
+        </p>
       </div>
     );
   }

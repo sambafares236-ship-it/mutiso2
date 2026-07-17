@@ -1,34 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp, AlertTriangle, Plus, Receipt } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdminSites, useCreateSite, useSiteForeman } from '@/hooks/useSite';
+import { useAdminSites, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
 import { usePendingSites, useApproveSite, useRejectSite, useClientRoster, type ClientRosterEntry } from '@/hooks/useSuperAdmin';
 import { isExpiringSoon } from '@/hooks/useCertifications';
 import { useSitePermits, useDecidePermit, PERMIT_TYPE_LABELS } from '@/hooks/usePermits';
-import { usePendingManualPayments, useConfirmManualPayment, useRevenueSummary } from '@/hooks/useSubscriptionPayment';
+import {
+  usePendingManualPayments,
+  useConfirmManualPayment,
+  useRevenueSummary,
+  useSitePaymentHistory,
+  isSubscriptionExpiringSoon,
+  isSubscriptionExpired,
+} from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TIER_PRICING, TIER_LABEL } from '@/lib/pricing';
+import { TIER_LABEL } from '@/lib/pricing';
 import { formatKES } from '@/lib/utils';
 import ForemanDashboard from './ForemanDashboard';
 import { ProjectOverviewView } from '@/components/forms/ProjectOverviewView';
 import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog';
-
-const createSiteSchema = z.object({
-  site_name: z.string().min(1, 'Site name is required'),
-  location: z.string().optional(),
-  subscription_tier: z.enum(['field_ops', 'pro']),
-});
-type CreateSiteValues = z.infer<typeof createSiteSchema>;
+import { CreateSiteWizard } from '@/components/forms/CreateSiteWizard';
+import { SubscriptionBillingView } from '@/components/forms/SubscriptionBillingView';
 
 function RoleBadge() {
   const { isSuperAdmin, isContractor, isForeman } = useAuth();
@@ -188,9 +188,25 @@ function PermitApprovalRow({ siteId }: { siteId: string }) {
   );
 }
 
+function SitePaymentStatusLine({ siteId }: { siteId: string }) {
+  const { data: payments, isLoading } = useSitePaymentHistory(siteId);
+  if (isLoading) return null;
+  const latest = payments?.[0];
+  if (!latest) {
+    return <p className="text-xs text-muted-foreground">No payment on file yet.</p>;
+  }
+  if (latest.status === 'completed') {
+    return <p className="text-xs text-success">Payment confirmed — awaiting admin approval.</p>;
+  }
+  if (latest.status === 'failed') {
+    return <p className="text-xs text-destructive">Payment failed — pay again from Billing.</p>;
+  }
+  return <p className="text-xs text-muted-foreground">Payment reported — awaiting confirmation.</p>;
+}
+
 function ContractorView() {
   const { data: sites, isLoading } = useAdminSites();
-  const createSite = useCreateSite();
+  const [showWizard, setShowWizard] = useState(false);
   const [overviewSite, setOverviewSite] = useState<{
     id: string;
     site_name: string;
@@ -199,26 +215,13 @@ function ContractorView() {
   const [paySite, setPaySite] = useState<{ id: string; site_name: string; subscription_tier: 'field_ops' | 'pro' } | null>(
     null,
   );
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<CreateSiteValues>({
-    resolver: zodResolver(createSiteSchema),
-    defaultValues: { subscription_tier: 'field_ops' },
-  });
-
-  const onSubmit = async (values: CreateSiteValues) => {
-    try {
-      await createSite.mutateAsync(values);
-      toast.success('Site created', { description: `${values.site_name} is pending approval.` });
-      reset();
-    } catch (err) {
-      toast.error('Could not create site', { description: err instanceof Error ? err.message : undefined });
-    }
-  };
+  const [billingSite, setBillingSite] = useState<{
+    id: string;
+    site_name: string;
+    subscription_tier: 'field_ops' | 'pro';
+    whatsapp_bot_enabled: boolean;
+    subscription_end: string | null;
+  } | null>(null);
 
   const hasActiveSite = sites?.some((s) => s.status === 'active');
 
@@ -232,7 +235,7 @@ function ContractorView() {
               <div>
                 <p className="font-medium text-foreground">Waiting on admin approval</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Your site(s) are pending review. Management features (Overview, Pay/Renew, invites, permits) unlock once an admin approves at least one site.
+                  Your site(s) are pending review. Management features (Overview, Pay/Renew, invites, permits) unlock once an admin confirms payment and approves the site.
                 </p>
               </div>
             </>
@@ -242,7 +245,7 @@ function ContractorView() {
               <div>
                 <p className="font-medium text-foreground">Get started</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Create your first site below to get started - an admin needs to approve it before you can manage it.
+                  Create your first site below — you'll pick a plan and pay for it as part of creating it, then an admin reviews and approves it.
                 </p>
               </div>
             </>
@@ -250,41 +253,9 @@ function ContractorView() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="card-industrial p-4 space-y-3" noValidate>
-        <h2 className="font-display text-xl text-foreground flex items-center gap-2">
-          <Building className="w-5 h-5 text-primary" /> New Site
-        </h2>
-        <div className="space-y-2">
-          <Label htmlFor="site_name">Site Name</Label>
-          <Input id="site_name" placeholder="Westlands Tower A" {...register('site_name')} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
-          <Input id="location" placeholder="Nairobi" {...register('location')} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="subscription_tier">Plan</Label>
-          <Controller
-            name="subscription_tier"
-            control={control}
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="subscription_tier">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="field_ops">{TIER_LABEL.field_ops} - KES {TIER_PRICING.field_ops.base}/mo</SelectItem>
-                  <SelectItem value="pro">{TIER_LABEL.pro} - KES {TIER_PRICING.pro.base}/mo</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          <p className="text-xs text-muted-foreground">Billing starts once an admin approves this site.</p>
-        </div>
-        <Button type="submit" variant="construction" className="w-full" disabled={isSubmitting}>
-          CREATE SITE
-        </Button>
-      </form>
+      <Button variant="construction" size="touch" className="w-full" onClick={() => setShowWizard(true)}>
+        <Plus className="w-4 h-4 mr-2" /> New Site
+      </Button>
 
       <div className="space-y-3">
         <h2 className="font-display text-xl text-foreground">Your Sites</h2>
@@ -296,70 +267,104 @@ function ContractorView() {
         ) : !sites?.length ? (
           <p className="text-sm text-muted-foreground">No sites yet — create one above.</p>
         ) : (
-          sites.map((site) => (
-            <div key={site.id} className="card-industrial p-4">
-              <div className="flex items-center justify-between">
-                <p className="font-medium text-foreground">{site.site_name}</p>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                  {site.status}
-                </span>
-              </div>
-              {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
-              <p className="text-xs text-muted-foreground mt-1">
-                {TIER_LABEL[site.subscription_tier as 'field_ops' | 'pro']}
-                {site.whatsapp_bot_enabled ? ' + WhatsApp Bot' : ''}
-              </p>
-              {site.subscription_end && (
-                <p className="text-xs text-muted-foreground">
-                  Subscription {new Date(site.subscription_end) < new Date() ? 'expired' : 'active until'}{' '}
-                  {new Date(site.subscription_end).toLocaleDateString('en-KE')}
-                </p>
-              )}
-              {site.status === 'active' ? (
-                <>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setOverviewSite({
-                          id: site.id,
-                          site_name: site.site_name,
-                          subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
-                        })
-                      }
-                    >
-                      <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="construction"
-                      onClick={() =>
-                        setPaySite({
-                          id: site.id,
-                          site_name: site.site_name,
-                          subscription_tier: site.subscription_tier as 'field_ops' | 'pro',
-                        })
-                      }
-                    >
-                      <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
-                    </Button>
-                  </div>
-                  <InviteRow siteId={site.id} siteName={site.site_name} />
-                  <PermitApprovalRow siteId={site.id} />
-                </>
-              ) : (
-                <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  {site.status === 'pending'
-                    ? 'Awaiting admin approval - management features unlock once approved.'
-                    : 'This site was not approved.'}
+          sites.map((site) => {
+            const tier = site.subscription_tier as 'field_ops' | 'pro';
+            const expired = site.status === 'active' && isSubscriptionExpired(site.subscription_end);
+            const expiringSoon = site.status === 'active' && !expired && isSubscriptionExpiringSoon(site.subscription_end);
+
+            return (
+              <div key={site.id} className="card-industrial p-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-foreground">{site.site_name}</p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      expired ? 'bg-destructive/15 text-destructive' : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    {expired ? 'expired' : site.status}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))
+                {site.location && <p className="text-sm text-muted-foreground">{site.location}</p>}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {TIER_LABEL[tier]}
+                  {site.whatsapp_bot_enabled ? ' + WhatsApp Bot' : ''}
+                </p>
+                {site.subscription_end && (
+                  <p className={`text-xs mt-0.5 ${expired ? 'text-destructive' : expiringSoon ? 'text-primary' : 'text-muted-foreground'}`}>
+                    Subscription {expired ? 'expired' : 'active until'}{' '}
+                    {new Date(site.subscription_end).toLocaleDateString('en-KE')}
+                  </p>
+                )}
+
+                {expired && (
+                  <div className="flex items-start gap-2 mt-3 p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+                    <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-destructive">
+                      Subscription expired — site management is paused until renewed.
+                    </p>
+                  </div>
+                )}
+
+                {site.status === 'active' ? (
+                  <>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {!expired && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setOverviewSite({ id: site.id, site_name: site.site_name, subscription_tier: tier })}
+                        >
+                          <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setBillingSite({
+                            id: site.id,
+                            site_name: site.site_name,
+                            subscription_tier: tier,
+                            whatsapp_bot_enabled: site.whatsapp_bot_enabled,
+                            subscription_end: site.subscription_end,
+                          })
+                        }
+                      >
+                        <Receipt className="w-4 h-4 mr-1" /> Billing
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="construction"
+                        onClick={() => setPaySite({ id: site.id, site_name: site.site_name, subscription_tier: tier })}
+                      >
+                        <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
+                      </Button>
+                    </div>
+                    {!expired && (
+                      <>
+                        <InviteRow siteId={site.id} siteName={site.site_name} />
+                        <PermitApprovalRow siteId={site.id} />
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-3 space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      {site.status === 'pending'
+                        ? 'Awaiting payment confirmation and admin approval.'
+                        : 'This site was not approved.'}
+                    </div>
+                    {site.status === 'pending' && <SitePaymentStatusLine siteId={site.id} />}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
+
+      {showWizard && <CreateSiteWizard onClose={() => setShowWizard(false)} />}
 
       {overviewSite && (
         <ProjectOverviewView
@@ -377,6 +382,17 @@ function ContractorView() {
           subscriptionTier={paySite.subscription_tier}
           open={!!paySite}
           onClose={() => setPaySite(null)}
+        />
+      )}
+
+      {billingSite && (
+        <SubscriptionBillingView
+          siteId={billingSite.id}
+          siteName={billingSite.site_name}
+          subscriptionTier={billingSite.subscription_tier}
+          whatsappBotEnabled={billingSite.whatsapp_bot_enabled}
+          subscriptionEnd={billingSite.subscription_end}
+          onClose={() => setBillingSite(null)}
         />
       )}
     </div>
@@ -649,12 +665,18 @@ function SuperAdminView() {
               <p className="text-xs text-muted-foreground mt-1">
                 Owner: {site.owner_name ?? 'Unknown'} ({site.owner_email ?? 'no email'})
               </p>
+              <p className={`text-xs mt-1 ${site.has_completed_payment ? 'text-success' : 'text-muted-foreground'}`}>
+                {site.has_completed_payment
+                  ? 'Payment confirmed'
+                  : 'Payment not yet confirmed — confirm it above before approving.'}
+              </p>
               <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
                   variant="construction"
                   onClick={() => handleApprove(site.id, site.site_name)}
-                  disabled={approveSite.isPending || rejectSite.isPending}
+                  disabled={approveSite.isPending || rejectSite.isPending || !site.has_completed_payment}
+                  title={site.has_completed_payment ? undefined : 'Waiting on payment confirmation'}
                 >
                   <Check className="w-4 h-4 mr-1" /> Approve
                 </Button>

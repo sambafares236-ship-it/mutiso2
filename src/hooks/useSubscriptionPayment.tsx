@@ -21,6 +21,89 @@ export interface PendingManualPayment extends SubscriptionPayment {
   site_name: string;
 }
 
+// Passive expiry checks, same pattern as isExpiringSoon() in
+// useCertifications.tsx - computed client-side, no DB trigger/cron. Used to
+// decide when the Billing view's reminder banner shows (only inside the
+// 5-day window, or once already expired) so a healthy subscription stays
+// visually quiet.
+export function isSubscriptionExpiringSoon(subscriptionEnd: string | null, thresholdDays = 5): boolean {
+  if (!subscriptionEnd) return false;
+  const end = new Date(subscriptionEnd);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return diffDays <= thresholdDays;
+}
+
+export function isSubscriptionExpired(subscriptionEnd: string | null): boolean {
+  if (!subscriptionEnd) return false;
+  const end = new Date(subscriptionEnd);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return end < today;
+}
+
+// Creates a site and its first (manual) subscription payment atomically via
+// create_site_with_manual_payment() - the site row cannot exist without a
+// payment record alongside it. STK mode is dormant (PAYMENT_MODE ===
+// 'manual' in src/lib/payment.ts) so only the manual path is wired up here.
+export function useCreateSiteWithManualPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      site_name,
+      location,
+      subscription_tier,
+      include_bot,
+      mpesa_receipt_number,
+    }: {
+      site_name: string;
+      location?: string;
+      subscription_tier: 'field_ops' | 'pro';
+      include_bot: boolean;
+      mpesa_receipt_number?: string;
+    }): Promise<{ site_id: string; payment_id: string }> => {
+      const { data, error } = await supabase
+        .rpc('create_site_with_manual_payment', {
+          p_site_name: site_name,
+          p_location: location || undefined,
+          p_subscription_tier: subscription_tier,
+          p_includes_bot: include_bot,
+          p_mpesa_receipt_number: mpesa_receipt_number || undefined,
+        })
+        .single();
+      if (error) throw error;
+      return data as { site_id: string; payment_id: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminSites'] });
+    },
+  });
+}
+
+// Full payment history for one site - powers the Billing view. Same RLS
+// policy as useSubscriptionPaymentStatus/usePendingManualPayments
+// ("Site owner can view their subscription payments"), now routed through
+// is_site_owner() rather than owns_site() so this keeps working even for an
+// expired site's owner trying to see what they've paid so far.
+export function useSitePaymentHistory(siteId: string | undefined) {
+  return useQuery({
+    queryKey: ['sitePaymentHistory', siteId],
+    queryFn: async (): Promise<SubscriptionPayment[]> => {
+      if (!siteId) return [];
+      const { data, error } = await supabase
+        .from('subscription_payment')
+        .select('*')
+        .eq('site_id', siteId)
+        .order('initiated_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as SubscriptionPayment[];
+    },
+    enabled: !!siteId,
+  });
+}
+
 // Kicks off an STK Push via the mpesa-stk-push Edge Function. The function
 // itself resolves the amount (from the site's subscription_tier + include_bot)
 // and phone number (the caller's own profile) server-side.
