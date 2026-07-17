@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp, AlertTriangle, Plus, Settings } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp, AlertTriangle, Plus, Receipt } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
@@ -317,10 +317,10 @@ function ContractorView() {
                           <LayoutDashboard className="w-4 h-4 mr-1" /> Overview
                         </Button>
                       )}
-                      {/* "Pay anytime" lives in the per-site Settings entry, not as an
-                          always-visible payment button - the card only surfaces a direct
-                          Pay/Renew action once the subscription is inside the 5-day window
-                          (or already expired). */}
+                      {/* Billing is the single payment home for an active site - pay/renew
+                          and full history both live inside it, so the card carries no
+                          separate Pay/Renew button. The card's expiry text still turns
+                          amber inside the 5-day window as the passive renewal nudge. */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -334,17 +334,8 @@ function ContractorView() {
                           })
                         }
                       >
-                        <Settings className="w-4 h-4 mr-1" /> Settings
+                        <Receipt className="w-4 h-4 mr-1" /> Billing
                       </Button>
-                      {(expiringSoon || expired) && (
-                        <Button
-                          size="sm"
-                          variant="construction"
-                          onClick={() => setPaySite({ id: site.id, site_name: site.site_name, subscription_tier: tier })}
-                        >
-                          <CreditCard className="w-4 h-4 mr-1" /> Pay / Renew
-                        </Button>
-                      )}
                     </div>
                     {!expired && (
                       <>
