@@ -66,6 +66,16 @@
 
 ## Resolved
 
+- **Four of five prod notification paths were silently dead — prod vault was missing/mismatched webhook secrets** — *resolved 2026-07-18*
+  - Area/files: `vault.decrypted_secrets` on prod (`zhpcqhvwpauhsmpufhww`); the `notify_*` triggers; every webhook workflow's `Get Webhook Secret` → `Verify Secret` pair
+  - Details: Found while answering "which n8n credential moves to production". Dev had 5 webhook secrets, prod had 2 — and one of those 2 held a *different value*. Consequences on prod, all silent:
+    - `permit_requested`, `invite_created`, `variation_order_raised` — **absent from prod's vault**. Every `notify_*` trigger is written `if v_webhook_secret is not null then perform net.http_post(...)`, so the trigger did not fire at all. No permit alerts, and **no foreman invite emails**, for real paying clients.
+    - `severe_incident` — present but a *different* value than dev (`dd80e887…` vs `e3789a78…`). Prod's trigger sent prod's value while n8n verified against dev's vault, so every medium/high-severity incident alert was rejected at `Verify Secret` and dropped.
+    - `subscription_lifecycle` was the only working path, and only because it was deliberately created with the same value on both projects.
+  - Fix: synced all four from dev into prod's vault via a single `do $$ … $$` block using `vault.create_secret` / `vault.update_secret` (one statement — a multi-statement string trips `cannot insert multiple commands into a prepared statement`). Verified by comparing `md5(decrypted_secret)` per name across both projects: all five now match. End-to-end check: POSTed to `/webhook/permit-requested` with prod's secret and empty contacts — execution passed `Verify Secret` and reached `No Phone Response` (previously it would have stopped at `Unauthorized Response`).
+  - Why matching values, not fresh ones: matching means every webhook verifies correctly both **before** the n8n credential cutover (verify reads dev's vault) and **after** it (verify reads prod's), so the credential can be flipped — or rolled back — without breaking anything.
+  - Lesson: **a Vault-gated webhook fails closed and silently.** A missing secret means the trigger never fires; a mismatched one means a 401 nobody sees. Any new `notify_*` webhook needs its secret created on *both* projects as part of shipping it, and `select name, md5(decrypted_secret) from vault.decrypted_secrets` compared across the two is the check that catches drift.
+
 - **WhatsApp chatbot had no fallback reply when the AI model call failed** — *resolved 2026-07-18*
   - Area/files: n8n workflow "WhatsApp Contractor Chatbot" (`Wp3iUU8iuN3yfxee`), `AI Agent` node
   - Details: When the model call errored, the execution died at the `AI Agent` node and the contractor received **complete silence** — no error message, nothing. Observed live in executions 93–95 (OpenAI `Insufficient quota`) and 102/104 (Groq rate limit). From the contractor's side "the bot is broken" and "the bot is ignoring me" looked identical.
