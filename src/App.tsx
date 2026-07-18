@@ -19,8 +19,11 @@ const App = () => (
     <AuthProvider>
       <OfflineQueueProvider>
         <Toaster />
-        <Analytics />
         <BrowserRouter>
+          {/* Inside the router on purpose: Analytics reads client-side route
+              changes via a router hook, so outside BrowserRouter it would only
+              ever record the first pageview of a session. */}
+          <Analytics />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<Index />} />
