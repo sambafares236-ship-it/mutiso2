@@ -7,6 +7,12 @@
 
 ## Open
 
+- **`site_milestone` rows are auto-seeded on every site but the table is Pro-gated — field_ops sites carry 5 invisible rows each**
+  - Area/files: `site_milestone` auto-seed trigger on `sites`, `20260730091000_pro_tier_policies.sql`
+  - Details: Found during the 2026-07-18 production end-to-end seeding run. The `AFTER INSERT` trigger on `sites` seeds the fixed 5-stage milestone set (Foundation/Structure/Roofing/Finishes/Handover) for **every** new site regardless of tier, but `site_milestone` is one of the 20 tables gated behind `owns_pro_site()`. Verified on prod: `3b` (field_ops) and `school` (field_ops) each hold 5 milestone rows that neither their owner nor their foreman can see or manage through the API. Confirmed the same count as `hotel` (pro), where they *are* usable.
+  - Impact: cosmetic/dead data rather than harmful — nothing reads them on a field_ops site, and on a field_ops→pro upgrade the milestones simply become visible, which is arguably the desired upgrade path. Worth a deliberate decision either way: keep seeding for all (upgrade-ready) and document it, or make the trigger tier-aware so the rows only exist where they can be used.
+  - Status: Open — decide intent; not blocking
+
 - **A contractor still has no in-app way to find or test the WhatsApp bot**
   - Area/files: `SettingsView.tsx`, `SubscriptionBillingView.tsx`, `ContractorView` site cards (`Index.tsx`), n8n workflow `MOu5emwNWcl6RIU1`
   - Details: The bot's WhatsApp number appears **nowhere in the app** — not in the create-site wizard (which only says "Add the WhatsApp Bot assistant +KES 1,500/mo"), not in Billing, not in Settings. The only number surfaced anywhere is the M-Pesa payment line (`0700 920 985`). The Landing page nonetheless promises "Message the Mutiso.AI bot and ask how's Westlands Tower A doing". Partially mitigated 2026-07-18: the welcome/renewal WhatsApp now appends a "Your WhatsApp assistant is active — just reply here" section when `whatsapp_bot_enabled`, and since that message is sent from the *same* Evolution instance the bot listens on, it lands in the exact thread the bot answers in — so the message is its own proof-of-life and there is no number to publish.
