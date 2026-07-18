@@ -7,10 +7,16 @@
 
 ## Open
 
-- **WhatsApp chatbot has no fallback reply when the AI model call fails**
-  - Area/files: n8n workflow "WhatsApp Contractor Chatbot" (`Wp3iUU8iuN3yfxee`), `AI Agent` node
-  - Details: When the model call errors, the execution dies at the `AI Agent` node and the contractor receives **complete silence** — no error message, nothing. Observed live on 2026-07-18 in executions 93–95 (OpenAI `Insufficient quota`) and 102/104 (Groq rate limit). The contractor has no way to tell the bot is broken vs. ignoring them.
-  - Proposed fix: add an error branch off `AI Agent` into a copy of `Send Agent Reply` posting a short "Sorry, I'm having trouble right now — try again in a moment", so a failure degrades to a reply instead of silence.
+- **A contractor still has no in-app way to find or test the WhatsApp bot**
+  - Area/files: `SettingsView.tsx`, `SubscriptionBillingView.tsx`, `ContractorView` site cards (`Index.tsx`), n8n workflow `MOu5emwNWcl6RIU1`
+  - Details: The bot's WhatsApp number appears **nowhere in the app** — not in the create-site wizard (which only says "Add the WhatsApp Bot assistant +KES 1,500/mo"), not in Billing, not in Settings. The only number surfaced anywhere is the M-Pesa payment line (`0700 920 985`). The Landing page nonetheless promises "Message the Mutiso.AI bot and ask how's Westlands Tower A doing". Partially mitigated 2026-07-18: the welcome/renewal WhatsApp now appends a "Your WhatsApp assistant is active — just reply here" section when `whatsapp_bot_enabled`, and since that message is sent from the *same* Evolution instance the bot listens on, it lands in the exact thread the bot answers in — so the message is its own proof-of-life and there is no number to publish.
+  - Still missing: (1) **contractors onboarded before 2026-07-18 never received that message**, so they have no thread and no number; (2) there is no "Test your assistant" affordance to re-verify later — a `wa.me/<number>?text=Hi` button in Settings or Billing would cover both, but needs the bot's real number as config (currently only implied by the Evolution instance).
+  - Status: Open
+
+- **WhatsApp bot's send endpoint is a free ngrok tunnel**
+  - Area/files: every WhatsApp-sending node across all n8n workflows; Evolution API credential `vpRac8Wc96KOUhNz`
+  - Details: All outbound WhatsApp posts to `https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5`. Free ngrok URLs rotate, and the instance is named `mutiso-test5` (a test instance). When that hostname changes, **every** WhatsApp send across all 14 workflows breaks simultaneously — alerts, digests, welcome/renewal, reminders, and the bot. Now that prod carries real paying clients this is the single most fragile piece of the notification stack.
+  - Fix: move Evolution to a stable host (paid ngrok domain, or host it properly) and rename the instance off `-test5`. Infra decision, not a code change.
   - Status: Open
 
 - **Gemini free-tier daily request cap not measured**
@@ -59,6 +65,12 @@
 - Status: Open
 
 ## Resolved
+
+- **WhatsApp chatbot had no fallback reply when the AI model call failed** — *resolved 2026-07-18*
+  - Area/files: n8n workflow "WhatsApp Contractor Chatbot" (`Wp3iUU8iuN3yfxee`), `AI Agent` node
+  - Details: When the model call errored, the execution died at the `AI Agent` node and the contractor received **complete silence** — no error message, nothing. Observed live in executions 93–95 (OpenAI `Insufficient quota`) and 102/104 (Groq rate limit). From the contractor's side "the bot is broken" and "the bot is ignoring me" looked identical.
+  - Fix: set `onError: continueErrorOutput` on `AI Agent` and wired its new error output (`main[1]`) to a new `Reply - Bot Unavailable` node — a copy of `Send Agent Reply` (same Evolution endpoint/credential, same `remoteJid` addressing) posting a static "Sorry, I'm having trouble reaching my system right now. Please try again in a moment." Verified the success path is untouched: `AI Agent.main[0]` still goes to `Send Agent Reply`, `main[1]` to the fallback.
+  - Lesson: an AI Agent node with no error output fails *silently from the user's perspective* — the execution is marked failed in n8n, but nothing reaches the person waiting for a reply. Any user-facing agent node needs an error branch, not just monitoring.
 
 - **Two migrations shared version `20260731091200`, silently blocking a security migration from ever reaching prod** — *resolved 2026-07-18*
   - Area/files: `supabase/migrations/20260731091200_diary_photos.sql`, `20260731091200_precreate_n8n_chat_histories.sql`
