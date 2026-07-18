@@ -23,8 +23,12 @@ const FIELD_ALIASES: Record<keyof Omit<UploadedActivity, 'name'> | 'name', strin
   responsible_party: ['responsible', 'responsible party', 'owner', 'assigned to'],
 };
 
+// Anything that isn't a letter becomes a space (not nothing) - MS Project's
+// CSV export writes "Start_Date"/"Outline_Number", and deleting the separator
+// instead of replacing it produced "startdate"/"outlinenumber", which matched
+// no alias at all, so those columns silently imported as empty.
 function normalizeHeader(header: string): string {
-  return header.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+  return header.toLowerCase().replace(/[^a-z]+/g, ' ').trim();
 }
 
 function matchColumn(headers: string[], aliases: string[]): string | null {
@@ -36,26 +40,65 @@ function matchColumn(headers: string[], aliases: string[]): string | null {
   return null;
 }
 
-// Accepts ISO (YYYY-MM-DD) as-is; otherwise assumes DD/MM/YYYY (the common
-// convention on exported schedules in this market) before falling back to
-// the browser's own date parser. Returns undefined - not an error - for
-// anything it can't confidently parse, since a missing date shouldn't
-// block the whole row from importing.
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+// Formats from local calendar parts. Never use toISOString() here: a date
+// parsed as local midnight in Kenya (UTC+3) serializes to the *previous*
+// day in UTC, shifting every imported date back by one.
+function toIsoDate(y: number, m: number, d: number): string | undefined {
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return undefined;
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+// Accepts ISO (YYYY-MM-DD) as-is; otherwise handles slash/dash dates with an
+// optional weekday prefix and a 2- or 4-digit year ("Fri 10/31/25", the shape
+// MS Project exports). Day/month order is genuinely ambiguous in a value like
+// "4/2/26", so it's resolved in this order: an out-of-range component decides
+// it outright; failing that, the weekday prefix decides it (only one reading
+// can land on the stated day); failing that, DD/MM (this market's convention).
+// Returns undefined - not an error - for anything it can't confidently parse,
+// since a missing date shouldn't block the whole row from importing.
 function parseDate(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
-  const value = raw.trim();
+  let value = raw.trim();
   if (!value) return undefined;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
 
-  const dmy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (dmy) {
-    const [, d, m, y] = dmy;
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  let expectedDow: number | null = null;
+  const dow = value.match(/^([a-z]{3,9})\.?,?\s+/i);
+  if (dow) {
+    const idx = WEEKDAYS.indexOf(dow[1].slice(0, 3).toLowerCase());
+    if (idx !== -1) {
+      expectedDow = idx;
+      value = value.slice(dow[0].length).trim();
+    }
+  }
+
+  const parts = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/);
+  if (parts) {
+    const a = Number(parts[1]);
+    const b = Number(parts[2]);
+    const y = parts[3].length === 2 ? 2000 + Number(parts[3]) : Number(parts[3]);
+
+    const asDmy = toIsoDate(y, b, a);
+    const asMdy = toIsoDate(y, a, b);
+
+    if (a > 12 && asDmy) return asDmy;
+    if (b > 12 && asMdy) return asMdy;
+    if (expectedDow !== null) {
+      const dmyMatches = asDmy && new Date(y, b - 1, a).getDay() === expectedDow;
+      const mdyMatches = asMdy && new Date(y, a - 1, b).getDay() === expectedDow;
+      if (dmyMatches && !mdyMatches) return asDmy;
+      if (mdyMatches && !dmyMatches) return asMdy;
+    }
+    if (asDmy) return asDmy;
+    if (asMdy) return asMdy;
   }
 
   const parsed = new Date(value);
   if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().split('T')[0];
+    return toIsoDate(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate());
   }
   return undefined;
 }
