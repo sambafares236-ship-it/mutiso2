@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 export default function Privacy() {
   const navigate = useNavigate();
 
+  // These pages are linked with target="_blank" from the sign-up form, so the
+  // tab they open in has no history behind it and navigate(-1) silently does
+  // nothing. React Router tracks its position in history as state.idx - 0
+  // means this is the first entry, so fall back to a real destination.
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="caution-stripe w-full fixed top-0 left-0" />
@@ -96,7 +106,7 @@ export default function Privacy() {
           </section>
         </div>
 
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={goBack}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
       </div>

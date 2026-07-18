@@ -18,3 +18,15 @@ export function normalizeKenyanPhone(raw: string): string | null {
   }
   return /^254[17]\d{8}$/.test(normalized) ? normalized : null;
 }
+
+// Display-only helper. Deliberately NOT part of the Edge Function mirror above -
+// nothing server-side formats numbers, so this one has no counterpart to keep
+// in sync. 254712345678 -> +254 712 345 678; anything that isn't in the stored
+// shape is returned as-is so legacy rows still render something readable.
+export function formatKenyanPhone(stored: string | null | undefined): string {
+  if (!stored) return '';
+  const normalized = normalizeKenyanPhone(stored);
+  if (!normalized) return stored;
+  const n = normalized.slice(3);
+  return `+254 ${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
+}

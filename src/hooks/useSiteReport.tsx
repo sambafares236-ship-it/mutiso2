@@ -22,6 +22,11 @@ export interface ReportEntry {
   date: string; // ISO date or timestamp, used for sorting/display
   /** Photo entries only - a signed URL to open the full image on tap. */
   imageUrl?: string;
+  /** Diary entries only - signed URLs for every photo a foreman attached
+   * to this entry, grouped under its title/description as their caption.
+   * Freestanding photos (not attached to a diary entry) stay separate
+   * `photo`-type entries and don't appear here. */
+  images?: string[];
 }
 
 // Pulls from every Stage 2-4 log table for a site + date range and
@@ -71,7 +76,7 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           .lte('date', endDate),
         supabase
           .from('site_photos')
-          .select('id, created_at, category, caption, photo_url')
+          .select('id, created_at, category, caption, photo_url, diary_id')
           .eq('site_id', siteId)
           .gte('created_at', startDate)
           .lte('created_at', endDate + 'T23:59:59'),
@@ -159,6 +164,22 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
         }),
       );
 
+      // Photos attached to a diary entry (diary_id set) are grouped under
+      // that entry instead of also appearing as their own freestanding
+      // `photo` entry - one photo shouldn't show up twice in the feed.
+      const diaryPhotoUrls = new Map<string, string[]>();
+      const freestandingPhotos: (NonNullable<typeof photos.data>[number] & { url?: string })[] = [];
+      (photos.data ?? []).forEach((p, i) => {
+        const url = photoUrls[i];
+        if (p.diary_id && url) {
+          const existing = diaryPhotoUrls.get(p.diary_id) ?? [];
+          existing.push(url);
+          diaryPhotoUrls.set(p.diary_id, existing);
+        } else {
+          freestandingPhotos.push({ ...p, url });
+        }
+      });
+
       const entries: ReportEntry[] = [
         ...(attendance.data ?? []).map((a) => ({
           id: `attendance-${a.id}`,
@@ -205,14 +226,15 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           title: d.title,
           description: d.description,
           date: d.created_at,
+          images: diaryPhotoUrls.get(d.id),
         })),
-        ...(photos.data ?? []).map((p, i) => ({
+        ...freestandingPhotos.map((p) => ({
           id: `photo-${p.id}`,
           type: 'photo' as const,
           title: `Photo (${p.category})`,
           description: p.caption,
           date: p.created_at,
-          imageUrl: photoUrls[i],
+          imageUrl: p.url,
         })),
         ...(incidents.data ?? []).map((i, idx) => ({
           id: `incident-${i.id}`,

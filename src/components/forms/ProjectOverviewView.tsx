@@ -148,8 +148,17 @@ function SiteHistoryPreview({ siteId, onOpenHistory }: { siteId: string; onOpenH
   // everything else here - previously this pulled from useSitePhotos
   // (every photo ever taken on the site) and just sliced the 2 most
   // recent, which could silently show an old photo on a day nothing was
-  // actually uploaded. Empty means empty now.
-  const previewPhotos = (entries ?? []).filter((e) => e.type === 'photo').slice(0, 2);
+  // actually uploaded. Empty means empty now. Pulls from both freestanding
+  // `photo` entries and photos attached to a diary entry (`images`) -
+  // otherwise a site that only ever uploads photos via the diary flow
+  // would never populate this preview strip.
+  const previewPhotos = (entries ?? [])
+    .flatMap((e) =>
+      e.type === 'photo' && e.imageUrl
+        ? [{ id: e.id, url: e.imageUrl, title: e.title }]
+        : (e.images ?? []).map((url, i) => ({ id: `${e.id}-${i}`, url, title: e.title })),
+    )
+    .slice(0, 2);
 
   if (isLoading) {
     return <Skeleton className="h-20 w-full rounded-xl" />;
@@ -166,7 +175,7 @@ function SiteHistoryPreview({ siteId, onOpenHistory }: { siteId: string; onOpenH
               onClick={onOpenHistory}
               className="block w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 hover:brightness-110 transition-[filter]"
             >
-              <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover" />
+              <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

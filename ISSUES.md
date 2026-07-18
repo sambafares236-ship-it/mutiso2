@@ -7,6 +7,24 @@
 
 ## Open
 
+- **WhatsApp chatbot has no fallback reply when the AI model call fails**
+  - Area/files: n8n workflow "WhatsApp Contractor Chatbot" (`Wp3iUU8iuN3yfxee`), `AI Agent` node
+  - Details: When the model call errors, the execution dies at the `AI Agent` node and the contractor receives **complete silence** — no error message, nothing. Observed live on 2026-07-18 in executions 93–95 (OpenAI `Insufficient quota`) and 102/104 (Groq rate limit). The contractor has no way to tell the bot is broken vs. ignoring them.
+  - Proposed fix: add an error branch off `AI Agent` into a copy of `Send Agent Reply` posting a short "Sorry, I'm having trouble right now — try again in a moment", so a failure degrades to a reply instead of silence.
+  - Status: Open
+
+- **Gemini free-tier daily request cap not measured**
+  - Area/files: n8n credential `Gemini (Mutiso Chatbot)` (`qktCKtVd8onei9Ya`), chatbot model node
+  - Details: Chatbot moved from OpenAI (quota exhausted) → Groq → **Gemini `gemini-2.5-flash`** on 2026-07-18 via the OpenAI-compatible endpoint (`https://generativelanguage.googleapis.com/v1beta/openai`). Groq's limits were measured directly from response headers (12,000 TPM for `llama-3.3-70b-versatile`, which a single chatbot message exceeded at ~13k tokens across its two LLM calls). Gemini's per-minute ceiling is far higher and resolved the failures, but its **daily request cap was never measured** — each WhatsApp message costs ~2 requests. Worth watching in AI Studio before relying on it for multiple contractors.
+  - Related: `Chat Memory` `contextWindowLength` was 50 (replaying 50 messages into every call — the dominant token cost); reduced to 8 for Groq, then raised to 20 under Gemini.
+  - Status: Open — monitoring, not broken
+
+- **Email change on an `@example.com` test account is rejected by Supabase Auth**
+  - Area/files: `src/hooks/useProfile.tsx` (`useUpdateProfile`), `src/components/forms/SettingsView.tsx`
+  - Details: `supabase.auth.updateUser({ email })` fails with `Email address "<current>@example.com" is invalid` — it rejects based on the account's **existing** address, not the new one, so no `@example.com` test account can exercise the email-change path. Consequence: **it is not empirically confirmed whether changing the sign-in email requires a confirmation click or applies immediately.** `config.toml` has `enable_confirmations = false` (suggesting immediate) but `double_confirm_changes = true` (suggesting confirmation). `useUpdateProfile` handles both — it reads back whether Auth applied the new address rather than assuming — and the toast copy adapts. Verify with a real domain the first time a real user changes their email.
+  - Related risk: if the change *does* apply immediately, a typo in the email field would change the sign-in address with no confirmation step, locking the contractor out. Consider requiring password re-entry or a confirm-email field before treating this as final.
+  - Status: Open
+
 - **Prod subscription REMINDERS don't fire — n8n Postgres credential still points at dev**
   - Area/files: n8n workflow "Subscription Renewal Reminders (WhatsApp + Email)" (`iBqsDhN3e7cjXQFZ`), n8n Postgres credential `LI49jpFJOx2PbcBp` ("Supabase Dev")
   - Details: As of 2026-07-18 both migrations + the `subscription_lifecycle_webhook_secret` Vault secret are deployed to **prod** (`zhpcqhvwpauhsmpufhww`), and welcome/renewal **do work end-to-end from prod** — prod's trigger posts to the n8n webhook, and the Verify node's dev-vault lookup still matches because the same secret value was used on both projects. The reminders workflow, however, `SELECT`s `subscription_reminder_queue` over that dev-pointed Postgres credential, so **prod sites are invisible to it and get no renewal reminders.**
@@ -41,4 +59,9 @@
 - Status: Open
 
 ## Resolved
-(none yet)
+
+- **Two migrations shared version `20260731091200`, silently blocking a security migration from ever reaching prod** — *resolved 2026-07-18*
+  - Area/files: `supabase/migrations/20260731091200_diary_photos.sql`, `20260731091200_precreate_n8n_chat_histories.sql`
+  - Details: Both files carried the same version prefix. Postgres records migrations by version, not filename, so once `diary_photos` was applied and recorded as `20260731091200`, the `precreate_n8n_chat_histories` file could **never** apply — `supabase db push` failed with `duplicate key value violates unique constraint "schema_migrations_pkey"`. Confirmed by probe: prod had `site_photos.diary_id` (diary_photos applied) but **no `public.n8n_chat_histories` table at all**. That is precisely the gap that migration exists to close — repointing n8n at prod would have had it auto-create the table with **RLS disabled**, exposing every contractor's raw WhatsApp conversation to read AND write through the public anon key.
+  - Fix: renamed the never-applied file to `20260731091400_precreate_n8n_chat_histories.sql` (it is explicitly idempotent — `create table if not exists` + `enable row level security`), then pushed to both projects. Verified live: the table now exists on dev and prod, and an anon `INSERT` is rejected with `42501 new row violates row-level security policy` on both.
+  - Lesson: **the version prefix, not the filename, is the unique key.** Before writing a new migration, check the prefix isn't already taken — `ls supabase/migrations/ | sed 's/_.*//' | sort | uniq -d` should print nothing.

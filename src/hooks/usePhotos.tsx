@@ -48,11 +48,16 @@ export function useUploadPhoto() {
       file,
       category,
       caption,
+      diaryId,
     }: {
       siteId: string;
       file: File;
       category: string;
       caption?: string;
+      /** Links this photo to a site_diary_log entry - the entry's own
+       * description doubles as the caption everywhere these grouped
+       * photos are shown, so per-photo caption is normally omitted here. */
+      diaryId?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -68,11 +73,15 @@ export function useUploadPhoto() {
         category,
         caption: caption || null,
         uploaded_by: user.id,
+        diary_id: diaryId || null,
       });
       if (insertError) throw insertError;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sitePhotos', variables.siteId] });
+      if (variables.diaryId) {
+        queryClient.invalidateQueries({ queryKey: ['siteReport'] });
+      }
     },
   });
 }

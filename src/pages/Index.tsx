@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp, AlertTriangle, Plus, Receipt } from 'lucide-react';
+import { LogOut, Building, Link as LinkIcon, Copy, Check, ShieldCheck, X as XIcon, FileCheck, LayoutDashboard, HardHat, CreditCard, Clock, Users, ChevronDown, TrendingUp, AlertTriangle, Plus, Receipt, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminSites, useSiteForeman } from '@/hooks/useSite';
 import { useCreateInvite, useSiteInvites } from '@/hooks/useInvite';
@@ -29,6 +29,7 @@ import { ProjectOverviewView } from '@/components/forms/ProjectOverviewView';
 import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog';
 import { CreateSiteWizard } from '@/components/forms/CreateSiteWizard';
 import { SubscriptionBillingView } from '@/components/forms/SubscriptionBillingView';
+import { SettingsView } from '@/components/forms/SettingsView';
 
 function RoleBadge() {
   const { isSuperAdmin, isContractor, isForeman } = useAuth();
@@ -712,6 +713,7 @@ function SuperAdminView() {
 export default function Index() {
   const navigate = useNavigate();
   const { user, isLoading, isSuperAdmin, isForeman, isAdmin, signOut } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -741,7 +743,15 @@ export default function Index() {
         <h1 className="font-display text-xl text-primary">MUTISO.AI</h1>
         <div className="flex items-center gap-3">
           <RoleBadge />
-          <Button variant="ghost" size="icon" onClick={handleSignOut}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSettings(true)}
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
             <LogOut className="w-5 h-5 text-muted-foreground" />
           </Button>
         </div>
@@ -766,6 +776,12 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      {showSettings && (
+        // The M-Pesa field is only meaningful for the role that actually pays
+        // for subscriptions; a foreman just needs their contact details.
+        <SettingsView showPaymentNumber={isAdmin} onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }

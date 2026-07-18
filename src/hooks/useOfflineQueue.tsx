@@ -13,13 +13,15 @@ import {
   type FailedOperation,
 } from '@/lib/offlineQueue';
 
-async function runOperation(op: NewQueuedOperation) {
+async function runOperation(op: NewQueuedOperation): Promise<Record<string, unknown> | null> {
   if (op.kind === 'insert') {
-    const { error } = await supabase.from(op.table as never).insert(op.payload as never);
+    const { data, error } = await supabase.from(op.table as never).insert(op.payload as never).select().single();
     if (error) throw error;
+    return data as Record<string, unknown>;
   } else {
-    const { error } = await supabase.rpc(op.fn as never, op.payload as never);
+    const { data, error } = await supabase.rpc(op.fn as never, op.payload as never);
     if (error) throw error;
+    return data as Record<string, unknown> | null;
   }
 }
 
@@ -34,7 +36,13 @@ interface OfflineQueueContextType {
   failed: FailedOperation[];
   isFlushing: boolean;
   flush: () => Promise<void>;
-  submitOrQueue: (op: NewQueuedOperation) => Promise<{ queued: boolean }>;
+  // `data` is only ever populated on the online-success path - a queued
+  // (offline) insert has no real row yet, so callers that need the new
+  // row's id (e.g. attaching a photo to a freshly-created diary entry)
+  // must check `!queued` first. See the "referential availability" rule
+  // in CLAUDE.md - don't attach something to an id that might itself still
+  // be sitting unsynced in this same queue.
+  submitOrQueue: (op: NewQueuedOperation) => Promise<{ queued: boolean; data?: Record<string, unknown> | null }>;
   dismissFailed: (id: string) => Promise<void>;
 }
 
@@ -120,12 +128,12 @@ export function OfflineQueueProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const submitOrQueue = useCallback(
-    async (op: NewQueuedOperation): Promise<{ queued: boolean }> => {
+    async (op: NewQueuedOperation): Promise<{ queued: boolean; data?: Record<string, unknown> | null }> => {
       if (navigator.onLine) {
         try {
-          await runOperation(op);
+          const data = await runOperation(op);
           queryClient.invalidateQueries();
-          return { queued: false };
+          return { queued: false, data };
         } catch (err) {
           if (!isNetworkFailure(err)) throw err;
         }

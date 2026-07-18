@@ -214,18 +214,41 @@ export function CategoryRow({ type, entries, compact = false, onClick, onExport 
                 <Wrapper
                   key={entry.id}
                   {...(entry.imageUrl ? { href: entry.imageUrl, target: '_blank', rel: 'noreferrer' } : {})}
-                  className={`flex items-center gap-3 p-2 rounded-lg bg-secondary/60 ${entry.imageUrl ? 'hover:bg-secondary transition-colors cursor-pointer' : ''}`}
+                  className={`flex items-start gap-3 p-2 rounded-lg bg-secondary/60 ${entry.imageUrl ? 'hover:bg-secondary transition-colors cursor-pointer' : ''}`}
                 >
                   {entry.imageUrl && (
                     <img
                       src={entry.imageUrl}
                       alt={entry.title}
-                      className="w-10 h-10 rounded-md object-cover flex-shrink-0 border border-border"
+                      className="w-10 h-10 rounded-md object-cover flex-shrink-0 border border-border mt-0.5"
                     />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-foreground truncate">{entry.title}</p>
                     {entry.description && <p className="text-xs text-muted-foreground truncate">{entry.description}</p>}
+                    {/* Photos a foreman attached to this diary entry - the
+                        entry's own title/description above is their caption,
+                        so each thumbnail doesn't repeat it. */}
+                    {!!entry.images?.length && (
+                      <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                        {entry.images.map((url, i) => (
+                          <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-12 h-12 flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <img
+                              src={url}
+                              alt={`${entry.title} — photo ${i + 1}`}
+                              className="w-full h-full object-cover rounded-md border border-border hover:brightness-110 transition-[filter]"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right flex-shrink-0">
                     {entry.amount && <p className="font-bold text-sm text-foreground">{entry.amount}</p>}

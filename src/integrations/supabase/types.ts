@@ -119,6 +119,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "activity_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       activity_dependency: {
@@ -220,6 +227,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "actual_cost_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
+          {
             foreignKeyName: "actual_cost_subcontractor_id_fkey"
             columns: ["subcontractor_id"]
             isOneToOne: false
@@ -260,6 +274,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "attendance_log_worker_id_fkey"
@@ -325,6 +346,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "boq_item_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       budget_line: {
@@ -372,6 +400,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_line_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -422,6 +457,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "certification_tool_id_fkey"
@@ -506,6 +548,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "defect_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       equipment_maintenance_log: {
@@ -555,6 +604,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_maintenance_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "equipment_maintenance_log_tool_id_fkey"
@@ -619,6 +675,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "incident_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       inspection_log: {
@@ -659,6 +722,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "inspection_log_template_id_fkey"
@@ -735,6 +805,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invites_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       material_inventory: {
@@ -769,6 +846,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_inventory_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -813,6 +897,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_usage_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -860,6 +951,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materials_delivered_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -971,6 +1069,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_certificate_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       payroll_line: {
@@ -1066,6 +1171,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payroll_run_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       petty_cash_log: {
@@ -1107,6 +1219,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "petty_cash_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       profiles: {
@@ -1115,6 +1234,7 @@ export type Database = {
           email_address: string | null
           full_name: string | null
           id: string
+          mpesa_phone_number: string | null
           phone_number: string | null
           updated_at: string
         }
@@ -1123,6 +1243,7 @@ export type Database = {
           email_address?: string | null
           full_name?: string | null
           id: string
+          mpesa_phone_number?: string | null
           phone_number?: string | null
           updated_at?: string
         }
@@ -1131,6 +1252,7 @@ export type Database = {
           email_address?: string | null
           full_name?: string | null
           id?: string
+          mpesa_phone_number?: string | null
           phone_number?: string | null
           updated_at?: string
         }
@@ -1185,6 +1307,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "resource_plan_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       schedule_baseline: {
@@ -1216,6 +1345,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_baseline_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -1297,6 +1433,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "site_assignments_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       site_contract: {
@@ -1350,6 +1493,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "site_contract_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       site_diary_log: {
@@ -1401,6 +1551,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "site_diary_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       site_milestone: {
@@ -1442,6 +1599,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "site_milestone_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       site_photos: {
@@ -1449,6 +1613,7 @@ export type Database = {
           caption: string | null
           category: string
           created_at: string
+          diary_id: string | null
           id: string
           photo_url: string
           site_id: string
@@ -1458,6 +1623,7 @@ export type Database = {
           caption?: string | null
           category?: string
           created_at?: string
+          diary_id?: string | null
           id?: string
           photo_url: string
           site_id: string
@@ -1467,6 +1633,7 @@ export type Database = {
           caption?: string | null
           category?: string
           created_at?: string
+          diary_id?: string | null
           id?: string
           photo_url?: string
           site_id?: string
@@ -1474,11 +1641,25 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "site_photos_diary_id_fkey"
+            columns: ["diary_id"]
+            isOneToOne: false
+            referencedRelation: "site_diary_log"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "site_photos_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_photos_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -1587,6 +1768,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subcontractor_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       subcontractor_work_order: {
@@ -1624,6 +1812,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_work_order_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "subcontractor_work_order_subcontractor_id_fkey"
@@ -1688,6 +1883,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscription_payment_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       tool_checkout_log: {
@@ -1740,6 +1942,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_checkout_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
           {
             foreignKeyName: "tool_checkout_log_tool_id_fkey"
@@ -1801,6 +2010,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_inventory_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -1873,6 +2089,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "toolbox_talk_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       user_roles: {
@@ -1940,6 +2163,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variation_order_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -2020,6 +2250,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "visitor_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       waste_log: {
@@ -2069,6 +2306,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waste_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
           },
         ]
       }
@@ -2127,6 +2371,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_permit_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
       workers_master: {
@@ -2168,11 +2419,32 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workers_master_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      subscription_reminder_queue: {
+        Row: {
+          days_left: number | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          reminder_kind: string | null
+          site_id: string | null
+          site_name: string | null
+          subscription_end: string | null
+          subscription_tier: string | null
+          whatsapp_bot_enabled: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _extend_site_subscription: {
@@ -2280,6 +2552,10 @@ export type Database = {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
+      is_site_assignee: {
+        Args: { _site_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_site_owner: {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
@@ -2337,7 +2613,7 @@ export type Database = {
       }
       request_manual_subscription_payment: {
         Args: {
-          p_includes_bot: boolean
+          p_includes_bot?: boolean
           p_mpesa_receipt_number?: string
           p_site_id: string
         }
