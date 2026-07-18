@@ -59,39 +59,80 @@ function toIsoDate(y: number, m: number, d: number): string | undefined {
 // can land on the stated day); failing that, DD/MM (this market's convention).
 // Returns undefined - not an error - for anything it can't confidently parse,
 // since a missing date shouldn't block the whole row from importing.
-function parseDate(raw: string | undefined): string | undefined {
-  if (!raw) return undefined;
+// Strips an optional weekday prefix and splits a slash/dash date into its
+// numeric parts. Shared by detectDateOrder and parseDate so both read a value
+// exactly the same way.
+function dateParts(raw: string): { a: number; b: number; y: number; dow: number | null } | null {
   let value = raw.trim();
+  let dow: number | null = null;
+  const prefix = value.match(/^([a-z]{3,9})\.?,?\s+/i);
+  if (prefix) {
+    const idx = WEEKDAYS.indexOf(prefix[1].slice(0, 3).toLowerCase());
+    if (idx !== -1) {
+      dow = idx;
+      value = value.slice(prefix[0].length).trim();
+    }
+  }
+  const m = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/);
+  if (!m) return null;
+  return {
+    a: Number(m[1]),
+    b: Number(m[2]),
+    y: m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]),
+    dow,
+  };
+}
+
+// A single export uses ONE date order throughout, so decide it once for the
+// whole file rather than per row. Any row with a component above 12 settles it
+// outright ("10/31/25" can only be M/D). Deciding per row is what produced a
+// real four-month error: MS Project's "Sat 5/9/26" is 9 May, but BOTH readings
+// (9 May and 5 Sep 2026) fall on a Saturday, so the weekday tiebreak below
+// can't separate them and the DD/MM fallback silently won. That misdates
+// roughly every seventh ambiguous value.
+export function detectDateOrder(values: (string | undefined)[]): 'mdy' | 'dmy' | null {
+  let mdy = 0;
+  let dmy = 0;
+  for (const v of values) {
+    if (!v) continue;
+    const p = dateParts(v);
+    if (!p) continue;
+    if (p.b > 12 && p.a <= 12) mdy++;
+    else if (p.a > 12 && p.b <= 12) dmy++;
+  }
+  if (mdy > 0 && dmy === 0) return 'mdy';
+  if (dmy > 0 && mdy === 0) return 'dmy';
+  return null; // no evidence, or genuinely mixed - fall back to per-row logic
+}
+
+function parseDate(raw: string | undefined, order: 'mdy' | 'dmy' | null = null): string | undefined {
+  if (!raw) return undefined;
+  const value = raw.trim();
   if (!value) return undefined;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
 
-  let expectedDow: number | null = null;
-  const dow = value.match(/^([a-z]{3,9})\.?,?\s+/i);
-  if (dow) {
-    const idx = WEEKDAYS.indexOf(dow[1].slice(0, 3).toLowerCase());
-    if (idx !== -1) {
-      expectedDow = idx;
-      value = value.slice(dow[0].length).trim();
-    }
-  }
-
-  const parts = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/);
+  const parts = dateParts(value);
   if (parts) {
-    const a = Number(parts[1]);
-    const b = Number(parts[2]);
-    const y = parts[3].length === 2 ? 2000 + Number(parts[3]) : Number(parts[3]);
+    const { a, b, y, dow: expectedDow } = parts;
 
     const asDmy = toIsoDate(y, b, a);
     const asMdy = toIsoDate(y, a, b);
 
+    // 1. An out-of-range component is definitive for this row.
     if (a > 12 && asDmy) return asDmy;
     if (b > 12 && asMdy) return asMdy;
+    // 2. The order proven by the rest of the file outranks the weekday hint -
+    //    it is derived from unambiguous rows, and a file does not mix orders.
+    if (order === 'mdy' && asMdy) return asMdy;
+    if (order === 'dmy' && asDmy) return asDmy;
+    // 3. Only one reading landing on the stated weekday settles it.
     if (expectedDow !== null) {
       const dmyMatches = asDmy && new Date(y, b - 1, a).getDay() === expectedDow;
       const mdyMatches = asMdy && new Date(y, a - 1, b).getDay() === expectedDow;
       if (dmyMatches && !mdyMatches) return asDmy;
       if (mdyMatches && !dmyMatches) return asMdy;
     }
+    // 4. Fall back to this market's convention.
     if (asDmy) return asDmy;
     if (asMdy) return asMdy;
   }
@@ -163,6 +204,13 @@ export function ScheduleUploadDialog({ siteId, existingCount, onClose }: Schedul
       const endCol = matchColumn(headers, FIELD_ALIASES.planned_end);
       const responsibleCol = matchColumn(headers, FIELD_ALIASES.responsible_party);
 
+      // Decide the file's date order once, from every date cell in it, before
+      // parsing any individual row (see detectDateOrder).
+      const dateOrder = detectDateOrder([
+        ...(startCol ? result.data.map((r) => r[startCol]) : []),
+        ...(endCol ? result.data.map((r) => r[endCol]) : []),
+      ]);
+
       let skipped = 0;
       const rows: UploadedActivity[] = [];
       for (const row of result.data) {
@@ -174,8 +222,8 @@ export function ScheduleUploadDialog({ siteId, existingCount, onClose }: Schedul
         rows.push({
           name,
           activity_code: codeCol ? row[codeCol]?.trim() || undefined : undefined,
-          planned_start: parseDate(startCol ? row[startCol] : undefined),
-          planned_end: parseDate(endCol ? row[endCol] : undefined),
+          planned_start: parseDate(startCol ? row[startCol] : undefined, dateOrder),
+          planned_end: parseDate(endCol ? row[endCol] : undefined, dateOrder),
           responsible_party: responsibleCol ? row[responsibleCol]?.trim() || undefined : undefined,
         });
       }

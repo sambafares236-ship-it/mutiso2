@@ -72,6 +72,12 @@
 
 ## Resolved
 
+- **Schedule importer misdated roughly every 7th ambiguous date (4-month error)** — *resolved 2026-07-18*
+  - Area/files: `src/components/forms/ScheduleUploadDialog.tsx` (`parseDate`, new `detectDateOrder`)
+  - Details: `parseDate` resolved day/month order **per row**. For a value like MS Project's `Sat 5/9/26`, both readings — 9 May 2026 and 5 Sep 2026 — fall on a Saturday, so the weekday tiebreak couldn't separate them and the DD/MM fallback silently won, yielding **2026-09-05 instead of 2026-05-09**. Found while investigating why the Egret Lodge Foundation milestone showed a phase ending 2026-09-05 when nothing in the source CSV is in September: the misdated `Mechanical Works` row sat in the future, so it never reached 100%, leaving Foundation at 23/24 and its completion unevidenced.
+  - Fix: added `detectDateOrder()`, which decides the order **once for the whole file** from rows where a component exceeds 12 (`10/31/25` can only be M/D). That order now outranks the weekday hint, since it is derived from unambiguous evidence and a single export never mixes orders. Precedence is now: out-of-range component → file-level order → weekday prefix → DD/MM fallback. Verified against the real 67-row Egret Lodge export: order detected as `mdy` from 134 date cells, `Sat 5/9/26` → `2026-05-09`, and every previously-correct value unchanged. After re-import, Foundation reached 24/24 at 100% with the phase correctly ending 2026-05-14.
+  - Lesson: **a per-row heuristic on a whole-file property is the bug.** Date order is a property of the export, not of each cell — infer it once from the rows that can't be ambiguous, then apply it uniformly. A tiebreak that is right 14 times out of 15 still corrupts a schedule.
+
 - **Four of five prod notification paths were silently dead — prod vault was missing/mismatched webhook secrets** — *resolved 2026-07-18*
   - Area/files: `vault.decrypted_secrets` on prod (`zhpcqhvwpauhsmpufhww`); the `notify_*` triggers; every webhook workflow's `Get Webhook Secret` → `Verify Secret` pair
   - Details: Found while answering "which n8n credential moves to production". Dev had 5 webhook secrets, prod had 2 — and one of those 2 held a *different value*. Consequences on prod, all silent:
