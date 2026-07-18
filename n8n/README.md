@@ -76,6 +76,15 @@ editing directly. After changing a workflow in n8n, re-export it here (see "Re-e
 
 ## Workflows
 
+**`00-overview-user-communication-workflows.json`** — a documentation-only canvas (inactive, no
+real trigger beyond a placeholder Manual Trigger required by n8n's "at least one executable node"
+rule), containing one sticky note per workflow below that actually sends something to a user
+(digests, alerts, the invite email, the chatbot — not `11b`'s internal sub-workflow). Grouped into
+three sticky-note-headed sections (event-triggered / scheduled digests / conversational). Exists
+so the whole "what messages does Mutiso.AI send, and when" picture is visible in one place without
+opening all 11 workflows individually — re-generate/edit it directly by hand if a workflow's
+trigger or behavior changes, this isn't kept in sync automatically.
+
 | # | File | Trigger | Status |
 |---|------|---------|--------|
 | 1 | `01-severe-incident-alert.json` | Postgres trigger → webhook (`POST /webhook/severe-incident`) | Built, active, verified end-to-end (real WhatsApp delivery confirmed 2026-07-16) |

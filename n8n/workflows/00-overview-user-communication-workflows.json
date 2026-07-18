@@ -1,0 +1,225 @@
+{
+  "name": "📡 OVERVIEW — Workflows That Communicate With Users",
+  "nodes": [
+    {
+      "id": "start",
+      "name": "Reference only - not run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-260, 0],
+      "parameters": {}
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "width": 1500,
+        "height": 140,
+        "color": 4,
+        "content": "# 📡 Mutiso.AI — Workflows That Communicate With Users\nEvery n8n workflow that sends a message to (or converses with) a real contractor/foreman, in one place. **Reference only — this workflow is inactive and never runs.** Full technical detail on each one lives in `n8n/README.md` in the repo.\n\n**Channel:** WhatsApp via Evolution API unless noted otherwise. Last updated 2026-07-18."
+      }
+    },
+    {
+      "id": "hdrA",
+      "name": "Header - Event-Triggered",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 160],
+      "parameters": {
+        "width": 1500,
+        "height": 70,
+        "color": 2,
+        "content": "## 🔔 Event-Triggered Alerts — fire the instant something happens (Postgres trigger → webhook), no cron involved"
+      }
+    },
+    {
+      "id": "n1",
+      "name": "1. Severe Incident Alert",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 250],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 2,
+        "content": "### 1. Severe Incident Alert\n**Trigger:** `incident_log` medium/high severity → webhook\n**To:** Site owner\n**Channel:** WhatsApp\n**Says:** Severity, category, description, workers involved, date — sent immediately after a serious incident is logged."
+      }
+    },
+    {
+      "id": "n2",
+      "name": "2. Permit Request Notification",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [360, 250],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 2,
+        "content": "### 2. Permit Request Notification\n**Trigger:** New `work_permit` row → webhook\n**To:** Site owner (skipped if they requested it themselves)\n**Channel:** WhatsApp\n**Says:** Permit type, who requested it, validity window — a decision is waiting on the owner."
+      }
+    },
+    {
+      "id": "n3",
+      "name": "3. Variation Order Raised",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [720, 250],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 2,
+        "content": "### 3. Variation Order Raised\n**Trigger:** New `variation_order` row → webhook\n**To:** The site's assigned **foreman**, not the owner (raising a VO is owner-only, so this reaches whoever is actually affected on site)\n**Channel:** WhatsApp\n**Says:** Title, cost impact (KES), time impact, description."
+      }
+    },
+    {
+      "id": "n4",
+      "name": "4. Foreman Invite Email",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1080, 250],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 2,
+        "content": "### 4. Foreman Invite Email\n**Trigger:** New `invites` row with an email → webhook\n**To:** The invited foreman's email\n**Channel:** Gmail\n**Says:** Welcome message with their join link. Replaced the old fire-and-forget browser call — now there's exactly one delivery path, not two competing ones."
+      }
+    },
+    {
+      "id": "hdrB",
+      "name": "Header - Scheduled Digests",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 560],
+      "parameters": {
+        "width": 1500,
+        "height": 70,
+        "color": 5,
+        "content": "## 📅 Scheduled Digests — cron-triggered, staggered across Mon–Thu mornings so a contractor never gets several at once"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "5. Certification & Insurance Digest",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 650],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 5. Certification & Insurance Expiring Digest\n**When:** Daily, 07:00 (Africa/Nairobi)\n**To:** Every contractor with something expiring\n**Channel:** WhatsApp\n**Says:** Worker/equipment certs + subcontractor insurance expiring within 30 days or already expired, across all their active sites — one combined message."
+      }
+    },
+    {
+      "id": "n6",
+      "name": "6. Weekly Payroll Reminder",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [360, 650],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 6. Weekly Payroll Reminder\n**When:** Mondays, 07:00\n**To:** Contractor\n**Channel:** WhatsApp\n**Says:** Which of their sites logged attendance last week but still have no payroll run generated."
+      }
+    },
+    {
+      "id": "n7",
+      "name": "7. Weekly Site Digest",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [720, 650],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 7. Weekly Site Digest\n**When:** Mondays, 08:00 (30 min after payroll reminder)\n**To:** Contractor — **one message per site**, not combined\n**Channel:** WhatsApp\n**Says:** Last week's attendance, diary entries, defects opened/closed, milestones completed. Skipped for a site with nothing to report."
+      }
+    },
+    {
+      "id": "n8",
+      "name": "8. Budget Overrun Alert",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 950],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 8. Budget Overrun Alert\n**When:** Tuesdays, 07:00\n**To:** Contractor, one combined message\n**Channel:** WhatsApp\n**Says:** Every (site, category) budget line at ≥90% spent, worst first, KES formatted."
+      }
+    },
+    {
+      "id": "n9",
+      "name": "9. Tool & Maintenance Digest",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [360, 950],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 9. Tool & Maintenance Digest\n**When:** Wednesdays, 07:00\n**To:** Contractor, one combined message\n**Channel:** WhatsApp\n**Says:** Tools checked out >7 days with no return (a heuristic — no due-date field exists yet), plus equipment maintenance due within 7 days."
+      }
+    },
+    {
+      "id": "n10",
+      "name": "10. Waste Disposal Digest",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [720, 950],
+      "parameters": {
+        "width": 340,
+        "height": 280,
+        "color": 5,
+        "content": "### 10. Waste Disposal Compliance Digest\n**When:** Thursdays, 07:00\n**To:** Contractor, one combined message\n**Channel:** WhatsApp\n**Says:** The week's waste log entries grouped by site/type/disposal method, quantities summed."
+      }
+    },
+    {
+      "id": "hdrC",
+      "name": "Header - Conversational",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 1260],
+      "parameters": {
+        "width": 1500,
+        "height": 70,
+        "color": 6,
+        "content": "## 💬 Conversational — the one workflow a user actually talks *to*, rather than just receiving alerts from"
+      }
+    },
+    {
+      "id": "n11",
+      "name": "11. WhatsApp Contractor Chatbot",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 1350],
+      "parameters": {
+        "width": 700,
+        "height": 320,
+        "color": 6,
+        "content": "### 11. WhatsApp Contractor Chatbot\n**Trigger:** Inbound WhatsApp message (Evolution API webhook)\n**To/From:** Any contractor, free-form questions\n**Channel:** WhatsApp, OpenAI gpt-4o-mini + persistent chat memory\n**Says:** Answers real questions about their own sites — attendance, deliveries, usage, inventory, incidents, defects, diary, progress, payroll, visitors, certifications, permits, budget. Identity is resolved from the sender's phone number server-side before any AI runs; an unrecognized number gets a canned reply and never reaches the LLM."
+      }
+    },
+    {
+      "id": "n11b",
+      "name": "11b. Bot Query Data (helper)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [740, 1350],
+      "parameters": {
+        "width": 340,
+        "height": 320,
+        "color": 1,
+        "content": "### 11b. Bot Query Data\n*(internal helper, not user-facing)*\n\nThe sub-workflow #11's AI Agent calls as its tool — runs `bot_query_site_data()` via a proven Postgres credential. Built as a separate sub-workflow because direct HTTP/Code tool nodes hit real bugs on this n8n instance."
+      }
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

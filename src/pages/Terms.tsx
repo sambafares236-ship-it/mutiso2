@@ -16,17 +16,12 @@ export default function Terms() {
           <h1 className="font-display text-2xl text-primary">MUTISO.AI — Terms of Service</h1>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Draft — last updated 2026-07-13. This is a plain-language draft, not a substitute for legal review. It has
-          not been reviewed by a lawyer and should not be relied on as compliance-complete.
-        </p>
-
         <div className="card-industrial p-5 space-y-5 text-sm text-foreground leading-relaxed">
           <section>
             <h2 className="font-display text-lg text-foreground mb-1">1. Who this agreement is between</h2>
             <p>
               These Terms govern use of the Mutiso.AI construction-site management application ("the Service"),
-              provided by [COMPANY NAME], a company registered in Kenya at [REGISTERED ADDRESS] ("we", "us"). By
+              provided by Jenga Technologies, a company registered in Kenya at Nairobi ("we", "us"). By
               creating an account you agree to these Terms.
             </p>
           </section>
@@ -94,7 +89,7 @@ export default function Terms() {
 
           <section>
             <h2 className="font-display text-lg text-foreground mb-1">9. Contact</h2>
-            <p>Questions about these Terms: [CONTACT EMAIL].</p>
+            <p>Questions about these Terms: mutisoconstruction@gmail.com.</p>
           </section>
         </div>
 
