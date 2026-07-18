@@ -7,10 +7,16 @@
 
 ## Open
 
-- **Subscription welcome/renewal/reminder n8n workflows are dev-only — need prod rollout**
-  - Area/files: migrations `20260731091000_notify_subscription_lifecycle.sql` + `20260731091100_subscription_reminder_queue.sql`; n8n workflows "Subscription Welcome & Renewal (WhatsApp + Email)" (`MOu5emwNWcl6RIU1`) + "Subscription Renewal Reminders (WhatsApp + Email)" (`iBqsDhN3e7cjXQFZ`)
-  - Details: Built + verified against **dev** on 2026-07-18. Welcome fires on `sites` pending→active, renewal on subscription_end pushed forward (both via one trigger → `/webhook/subscription-lifecycle`); reminders are a daily-08:00-EAT n8n Schedule reading the `subscription_reminder_queue` view (threshold-exact at 5/1/−1 days). To go live for real clients: (1) `supabase db push` both migrations to **prod** (pooler URL, per CLAUDE.md); (2) create the `subscription_lifecycle_webhook_secret` Vault secret on **prod** via `select vault.create_secret(...)` and set the same value in the webhook's Verify node (currently the dev secret only); (3) repoint the n8n Postgres credential (`LI49jpFJOx2PbcBp`, "Supabase Dev") to prod, or clone both workflows with a prod Postgres credential — same pending repoint the severe-incident/permit/etc. webhooks need. Until then these read/act on dev test data only.
-  - Not-yet-verified-live: the three reminder message bodies (expiring_5d / expiring_1d / expired) haven't been rendered by a real run — no dev site currently sits at a 5/1/−1 threshold. The classification (SQL) and the identical rendering approach (WF1, verified live) are both proven; seed a disposable site at +5 days to watch one go out if a live confirmation is wanted.
+- **Prod subscription REMINDERS don't fire — n8n Postgres credential still points at dev**
+  - Area/files: n8n workflow "Subscription Renewal Reminders (WhatsApp + Email)" (`iBqsDhN3e7cjXQFZ`), n8n Postgres credential `LI49jpFJOx2PbcBp` ("Supabase Dev")
+  - Details: As of 2026-07-18 both migrations + the `subscription_lifecycle_webhook_secret` Vault secret are deployed to **prod** (`zhpcqhvwpauhsmpufhww`), and welcome/renewal **do work end-to-end from prod** — prod's trigger posts to the n8n webhook, and the Verify node's dev-vault lookup still matches because the same secret value was used on both projects. The reminders workflow, however, `SELECT`s `subscription_reminder_queue` over that dev-pointed Postgres credential, so **prod sites are invisible to it and get no renewal reminders.**
+  - Deadline pressure: prod's earliest `subscription_end` is **2026-07-21**, so that site hits the 1-day reminder on **2026-07-20** and will silently get nothing unless this is resolved first. (It already missed the 5-day window, which fell before this shipped.)
+  - Two options: (a) repoint `LI49jpFJOx2PbcBp` to prod — the CLAUDE.md-flagged "once a real client is onboarded" task, but it redirects ALL ~10 workflows (severe incident, permits, invites, variation orders, digests, WhatsApp bot) off dev at once; or (b) add a second, prod-pointed Postgres credential and switch only the reminders workflow to it, leaving dev automation intact. (b) is the surgical option; (a) is the eventual end state.
+  - Status: Open — needs a decision, not just execution
+
+- **Subscription reminder message bodies not yet rendered by a live run**
+  - Area/files: n8n workflow `iBqsDhN3e7cjXQFZ`, `Prepare Messages` node
+  - Details: The three variants (expiring_5d / expiring_1d / expired) have never been rendered by a real execution — neither dev nor prod currently has a site at a 5/1/−1 threshold. The `reminder_kind` classification is verified in SQL, and the identical rendering approach is verified live in the welcome/renewal workflow, so risk is low; seed a disposable site at +5 days to confirm one live if wanted.
   - Status: Open
 
 - **STK-push site creation isn't wired into the new payment-gated onboarding flow**
