@@ -148,7 +148,11 @@ const CATEGORIES: CategoryConfig[] = [
 // Payroll (and Petty Cash, never listed here) are core money management -
 // stays base-tier per explicit user decision, even though most other
 // financial features (Budget, Payment Certs, Subcontractors) are Pro-only.
-const PRO_ONLY_TILE_KEYS: FormType[] = ['tools', 'defects'];
+// Tools (hand tools) is base-tier - everyday field kit, same class of action
+// as attendance or a delivery. Heavy plant stays Pro via the whole
+// heavyEquipment category below, and the DB enforces the same split on
+// tool_inventory.category ('plant' vs everything else).
+const PRO_ONLY_TILE_KEYS: FormType[] = ['defects'];
 const PRO_ONLY_CATEGORY_KEYS = ['heavyEquipment', 'assets', 'environmental'];
 
 function getTierFilteredCategories(isPro: boolean): CategoryConfig[] {

@@ -244,6 +244,7 @@ export default function Landing() {
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <li>Attendance, materials, diary, photos</li>
                 <li>Incidents, toolbox talks, inspections, permits</li>
+                <li>Tool checkout &amp; return log</li>
                 <li>Real-time severe-incident WhatsApp/email alerts</li>
               </ul>
               <p className="mt-4 text-xs text-muted-foreground">
@@ -259,7 +260,7 @@ export default function Landing() {
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <li>Everything in Field Ops & Safety</li>
                 <li>Defects, milestones, schedule/Gantt, budget, payroll</li>
-                <li>Variation orders, subcontractors, tools & equipment</li>
+                <li>Variation orders, subcontractors, heavy plant</li>
                 <li>Weekly and monthly WhatsApp/email digests</li>
               </ul>
               <p className="mt-4 text-xs text-muted-foreground">
