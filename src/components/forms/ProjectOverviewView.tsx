@@ -77,7 +77,27 @@ function ScheduleSection({ siteId, onViewDetail }: { siteId: string; onViewDetai
     ? activities.reduce((sum, a) => sum + a.percent_complete, 0) / activities.length
     : 0;
 
+  // A baseline can exist and still be useless to compare against: it may
+  // have been snapshotted while the WBS had names but no planned dates
+  // (an import whose date columns didn't parse), or its activities may
+  // since have been replaced by a re-upload. Either way every row lands in
+  // 'unknown' and the card would otherwise show zeros next to a healthy
+  // percent ring - which reads as a broken chart rather than as an
+  // actionable "re-save your baseline".
+  const baselineUnusable =
+    !!progress?.baseline && progress.items.length > 0 && progress.unknown === progress.items.length;
+  const hasDatedActivities = !!activities?.some((a) => a.planned_start && a.planned_end);
+
   const handleSaveBaseline = async () => {
+    // Snapshotting a WBS with no planned dates produces a baseline nothing
+    // can ever be measured against - that's how this site ended up with 67
+    // dateless baseline rows. Refuse it at the point of saving instead.
+    if (!hasDatedActivities) {
+      toast.error('Nothing to baseline yet', {
+        description: 'None of these activities have planned start and end dates. Upload or add dates first.',
+      });
+      return;
+    }
     try {
       await saveBaseline.mutateAsync({ site_id: siteId });
       toast.success('Schedule baseline saved', { description: 'This is now the reference point for progress tracking.' });
@@ -93,11 +113,30 @@ function ScheduleSection({ siteId, onViewDetail }: { siteId: string; onViewDetai
   return (
     <div className="space-y-3">
       {progress?.baseline ? (
-        <ScheduleSummaryChart ahead={progress.ahead} onTrack={progress.onTrack} behind={progress.behind} overallPercent={overallPercent} />
+        <ScheduleSummaryChart
+          ahead={progress.ahead}
+          onTrack={progress.onTrack}
+          behind={progress.behind}
+          unknown={progress.unknown}
+          overallPercent={overallPercent}
+        />
       ) : (
         <p className="text-xs text-muted-foreground">
           No schedule baseline saved yet. Add activities, then save a baseline to start tracking progress.
         </p>
+      )}
+
+      {baselineUnusable && (
+        <div className="flex items-start gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          <Save className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Your saved baseline can&apos;t be compared to these activities — it has no planned dates, or the schedule has
+            been re-uploaded since.{' '}
+            {isContractor
+              ? 'Save the schedule as a baseline again to start tracking ahead/behind.'
+              : 'Ask the contractor to save the schedule as a baseline again.'}
+          </p>
+        </div>
       )}
 
       {progress?.mostDelayed && (

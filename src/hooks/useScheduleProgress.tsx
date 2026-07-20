@@ -31,6 +31,10 @@ export interface ScheduleProgressSummary {
 
 const ON_TRACK_BUFFER_PERCENT = 5;
 
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function daysBetween(a: string, b: string): number {
   const msPerDay = 24 * 60 * 60 * 1000;
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / msPerDay);
@@ -108,10 +112,41 @@ export function useScheduleProgress(siteId: string | undefined) {
       if (baError) throw baError;
       if (liveError) throw liveError;
 
+      // schedule_baseline_activity.activity_id is `on delete set null`, and
+      // replace_site_activities() (the CSV schedule upload) deletes and
+      // re-inserts every activity with fresh ids - so uploading a revised
+      // schedule after a baseline was saved nulls every link and would
+      // otherwise leave the whole baseline unmatched ("Ahead 0 / On track 0
+      // / Behind 0" against a schedule that's clearly progressing). Fall
+      // back to activity_code, then to name, both of which survive a
+      // re-upload of the same schedule.
       const liveById = new Map((liveActivities || []).map((a) => [a.id, a]));
-      const items = (baselineActivities || []).map((ba) =>
-        classify(ba, ba.activity_id ? liveById.get(ba.activity_id) : undefined),
+      const liveByCode = new Map(
+        (liveActivities || []).filter((a) => a.activity_code).map((a) => [a.activity_code as string, a]),
       );
+      // Name matching is the last resort and is only safe when the name is
+      // unique - a real site has repeated names ("Mechanical Works" under
+      // two different phases), and silently picking one of them is the
+      // name-string matching this app avoids everywhere else. An ambiguous
+      // name stays unmatched and surfaces as "Not tracked" instead.
+      const nameCounts = new Map<string, number>();
+      for (const a of liveActivities || []) {
+        const n = normalizeName(a.name);
+        nameCounts.set(n, (nameCounts.get(n) ?? 0) + 1);
+      }
+      const liveByName = new Map(
+        (liveActivities || [])
+          .filter((a) => nameCounts.get(normalizeName(a.name)) === 1)
+          .map((a) => [normalizeName(a.name), a]),
+      );
+
+      const items = (baselineActivities || []).map((ba) => {
+        const live =
+          (ba.activity_id ? liveById.get(ba.activity_id) : undefined) ??
+          (ba.activity_code ? liveByCode.get(ba.activity_code) : undefined) ??
+          liveByName.get(normalizeName(ba.name));
+        return classify(ba, live);
+      });
 
       const ahead = items.filter((i) => i.classification === 'ahead').length;
       const onTrack = items.filter((i) => i.classification === 'on_track').length;

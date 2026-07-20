@@ -2,6 +2,11 @@ interface ScheduleSummaryChartProps {
   ahead: number;
   onTrack: number;
   behind: number;
+  // Baseline rows that couldn't be matched to a live activity. Shown only
+  // when non-zero - without it, an unmatched baseline renders as three
+  // zeros next to a healthy-looking percent ring, which reads as the chart
+  // being broken rather than as "these activities aren't being tracked".
+  unknown?: number;
   overallPercent: number;
 }
 
@@ -37,12 +42,13 @@ function ProgressRing({ percent, size = 64, stroke = 7 }: { percent: number; siz
   );
 }
 
-export function ScheduleSummaryChart({ ahead, onTrack, behind, overallPercent }: ScheduleSummaryChartProps) {
-  const total = ahead + onTrack + behind;
+export function ScheduleSummaryChart({ ahead, onTrack, behind, unknown = 0, overallPercent }: ScheduleSummaryChartProps) {
+  const total = ahead + onTrack + behind + unknown;
   const segments = [
     { key: 'ahead', count: ahead, className: 'bg-success', label: 'Ahead' },
     { key: 'on_track', count: onTrack, className: 'bg-muted-foreground/40', label: 'On track' },
     { key: 'behind', count: behind, className: 'bg-destructive', label: 'Behind' },
+    { key: 'unknown', count: unknown, className: 'bg-muted-foreground/20', label: 'Not tracked' },
   ] as const;
 
   return (
@@ -52,7 +58,7 @@ export function ScheduleSummaryChart({ ahead, onTrack, behind, overallPercent }:
         <div
           className="h-2.5 rounded-full bg-secondary overflow-hidden flex gap-0.5"
           role="img"
-          aria-label={`${ahead} ahead, ${onTrack} on track, ${behind} behind`}
+          aria-label={`${ahead} ahead, ${onTrack} on track, ${behind} behind${unknown ? `, ${unknown} not tracked` : ''}`}
         >
           {total === 0 ? (
             <div className="w-full bg-muted-foreground/20" />
@@ -63,12 +69,14 @@ export function ScheduleSummaryChart({ ahead, onTrack, behind, overallPercent }:
           )}
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
-          {segments.map((s) => (
-            <span key={s.key} className="flex items-center gap-1.5 text-muted-foreground">
-              <span className={`w-2 h-2 rounded-full ${s.className}`} />
-              {s.label} <span className="text-foreground font-medium">{s.count}</span>
-            </span>
-          ))}
+          {segments
+            .filter((s) => s.key !== 'unknown' || s.count > 0)
+            .map((s) => (
+              <span key={s.key} className="flex items-center gap-1.5 text-muted-foreground">
+                <span className={`w-2 h-2 rounded-full ${s.className}`} />
+                {s.label} <span className="text-foreground font-medium">{s.count}</span>
+              </span>
+            ))}
         </div>
       </div>
     </div>
