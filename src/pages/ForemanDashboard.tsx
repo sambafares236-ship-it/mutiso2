@@ -3,7 +3,6 @@ import {
   Truck,
   Hammer,
   ClipboardList,
-  Camera,
   Users,
   CloudOff,
   RefreshCw,
@@ -35,7 +34,6 @@ import { AttendanceForm } from '@/components/forms/AttendanceForm';
 import { DeliveryForm } from '@/components/forms/DeliveryForm';
 import { UsageForm } from '@/components/forms/UsageForm';
 import { DiaryForm } from '@/components/forms/DiaryForm';
-import { PhotoForm } from '@/components/forms/PhotoForm';
 import { IncidentForm } from '@/components/forms/IncidentForm';
 import { ToolboxTalkForm } from '@/components/forms/ToolboxTalkForm';
 import { InspectionForm } from '@/components/forms/InspectionForm';
@@ -56,7 +54,6 @@ type FormType =
   | 'delivery'
   | 'usage'
   | 'diary'
-  | 'photo'
   | 'incident'
   | 'toolbox'
   | 'inspection'
@@ -90,7 +87,6 @@ const OPERATIONS_TILES: TileConfig[] = [
   // reads as one group. Read-only: stock is derived from those two actions.
   { key: 'inventory', icon: Package, label: 'Stock', subtitle: "What's on site", color: 'text-cyan-400', bg: 'bg-cyan-400/15' },
   { key: 'diary', icon: ClipboardList, label: 'Site diary', subtitle: 'Log activity', color: 'text-pink-400', bg: 'bg-pink-400/15' },
-  { key: 'photo', icon: Camera, label: 'Photos', subtitle: 'Upload', color: 'text-muted-foreground', bg: 'bg-muted/30' },
   { key: 'tools', icon: Cog, label: 'Tools', subtitle: 'Check in/out', color: 'text-teal-400', bg: 'bg-teal-400/15' },
 ];
 
@@ -368,7 +364,6 @@ export default function ForemanDashboard() {
       {activeForm === 'delivery' && <DeliveryForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'usage' && <UsageForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'diary' && <DiaryForm siteId={site.id} onClose={() => setActiveForm(null)} />}
-      {activeForm === 'photo' && <PhotoForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'incident' && <IncidentForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'toolbox' && <ToolboxTalkForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'inspection' && <InspectionForm siteId={site.id} onClose={() => setActiveForm(null)} />}
