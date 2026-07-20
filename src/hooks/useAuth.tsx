@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { isNetworkFailure } from './useOfflineQueue';
 
 interface AuthContextType {
   user: User | null;
@@ -61,6 +62,54 @@ function proactivelyCleanExpiredTokens() {
   }
 }
 
+// Supabase's own localStorage adapter stores the full Session object
+// verbatim under the sb-*-auth-token key - this reads it directly,
+// bypassing getSession() entirely. Used only when getSession() couldn't be
+// reached (offline/timeout), never as a substitute for the SDK's own
+// resolution when it succeeds - this is a same-tab, no-network fallback,
+// not a replacement for the real thing.
+export function readPersistedSession(): Session | null {
+  try {
+    const keys = Object.keys(localStorage).filter(
+      (k) => k.startsWith('sb-') && k.includes('auth-token'),
+    );
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const expiresAt = parsed?.expires_at;
+      if (expiresAt && expiresAt * 1000 > Date.now() && parsed?.user) {
+        return parsed as Session;
+      }
+    }
+  } catch {
+    // Malformed/inaccessible storage - fall through to null, same as "no session"
+  }
+  return null;
+}
+
+// A small localStorage cache of the last-known role list per user, so a
+// foreman who force-quits and reopens the app while still offline sees
+// their normal role-gated dashboard (stale-but-correct) instead of a
+// blank/no-role state - fetchRoles() falls back to this on failure rather
+// than emptying a role list that's still almost certainly right.
+export function cacheRoles(userId: string, roles: string[]) {
+  try {
+    localStorage.setItem(`mutiso_cached_roles_${userId}`, JSON.stringify(roles));
+  } catch {
+    // Storage access issues - ignore, caching roles is a best-effort nicety
+  }
+}
+
+export function readCachedRoles(userId: string): string[] {
+  try {
+    const raw = localStorage.getItem(`mutiso_cached_roles_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -71,12 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId);
       if (error) {
-        setRoles([]);
+        setRoles(readCachedRoles(userId));
       } else {
-        setRoles(data?.map((r) => r.role) || []);
+        const roleList = data?.map((r) => r.role) || [];
+        setRoles(roleList);
+        cacheRoles(userId, roleList);
       }
     } catch {
-      setRoles([]);
+      setRoles(readCachedRoles(userId));
     }
   };
 
@@ -86,10 +137,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       proactivelyCleanExpiredTokens();
 
+      let timedOut = false;
       try {
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Session check timed out')), 8000),
+          setTimeout(() => {
+            timedOut = true;
+            reject(new Error('Session check timed out'));
+          }, 8000),
         );
 
         const result = (await Promise.race([sessionPromise, timeoutPromise])) as Awaited<
@@ -105,11 +160,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           await fetchRoles(session.user.id);
         }
-      } catch {
-        // Expected/handled case (e.g. stale/malformed token) - clean up and
-        // continue to the login page without console noise.
-        clearStaleAuthTokens();
-        if (mounted) {
+      } catch (err) {
+        if (!mounted) return;
+
+        // getSession() either didn't resolve in time or failed with what
+        // looks like a network error - both are "we couldn't reach the
+        // server," not "this token is bad." Going offline is exactly the
+        // condition most likely to trigger this (a stalled background
+        // token-refresh attempt, or a fast-failing dead connection), so
+        // treating it as a sign-out would bounce an already-logged-in
+        // foreman back to the login screen for no real reason. Fall back
+        // to whatever's still sitting, unexpired, in localStorage instead.
+        if (timedOut || isNetworkFailure(err)) {
+          const cached = readPersistedSession();
+          setSession(cached);
+          setUser(cached?.user ?? null);
+          if (cached?.user) setRoles(readCachedRoles(cached.user.id));
+        } else {
+          // A genuine rejection from getSession() itself (e.g. an
+          // actually invalid/revoked refresh token) - this IS a real
+          // "log the user out" signal, unlike the network case above.
+          clearStaleAuthTokens();
           setSession(null);
           setUser(null);
           setRoles([]);
