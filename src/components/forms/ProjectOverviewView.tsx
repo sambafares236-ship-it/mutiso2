@@ -20,6 +20,7 @@ import {
   Users2,
   Receipt,
   Truck,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSiteActivities } from '@/hooks/useActivities';
@@ -35,6 +36,7 @@ import { useSiteDefects } from '@/hooks/useDefects';
 import { usePayrollSummary } from '@/hooks/usePayroll';
 import { useSitePettyCashTotal } from '@/hooks/usePettyCash';
 import { useSiteTools, useEquipmentEfficiency } from '@/hooks/useTools';
+import { useInventory } from '@/hooks/useMaterials';
 import { formatKES } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,6 +54,7 @@ import { PaymentCertificatesView } from './PaymentCertificatesView';
 import { CertificationsView } from './CertificationsView';
 import { SubcontractorsView } from './SubcontractorsView';
 import { MaterialPaymentsView } from './MaterialPaymentsView';
+import { InventoryView, LOW_STOCK_THRESHOLD } from './InventoryView';
 import { PettyCashHistoryView } from './PettyCashHistoryView';
 import { QualityProgressView } from './QualityProgressView';
 import { HeavyEquipmentView } from './HeavyEquipmentView';
@@ -295,6 +298,49 @@ function VisitorTodayBadge({ siteId }: { siteId: string }) {
   );
 }
 
+// Compact stock summary for the Overview card - the low-stock items first,
+// since "what are we about to run out of" is the only part of the balance
+// that's urgent at a glance. Everything else is behind "View all".
+function InventorySummary({ siteId }: { siteId: string }) {
+  const { data: inventory, isLoading } = useInventory(siteId);
+
+  if (isLoading) return <Skeleton className="h-20 w-full rounded-lg" />;
+  if (!inventory?.length) {
+    return <p className="text-sm text-muted-foreground">No stock recorded yet — it builds up from logged deliveries.</p>;
+  }
+
+  const low = inventory.filter((item) => Number(item.current_quantity) <= LOW_STOCK_THRESHOLD);
+  const preview = [...(low.length ? low : inventory)]
+    .sort((a, b) => Number(a.current_quantity) - Number(b.current_quantity))
+    .slice(0, 3);
+
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Items in stock</span>
+        <span className="font-medium text-foreground">{inventory.length}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Low stock</span>
+        <span className={`font-medium ${low.length ? 'text-destructive' : 'text-success'}`}>{low.length}</span>
+      </div>
+      <div className="space-y-1 pt-1">
+        {preview.map((item) => {
+          const isLow = Number(item.current_quantity) <= LOW_STOCK_THRESHOLD;
+          return (
+            <div key={item.id} className="flex justify-between text-xs">
+              <span className="text-muted-foreground truncate mr-2">{item.material_name}</span>
+              <span className={isLow ? 'text-destructive' : 'text-foreground'}>
+                {item.current_quantity} {item.unit ?? ''}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SectionCard({
   icon: Icon,
   title,
@@ -346,6 +392,7 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
     | 'certifications'
     | 'subcontractors'
     | 'materialPayments'
+    | 'inventory'
     | 'pettyCash'
     | 'qualityProgress'
     | 'heavyEquipment'
@@ -452,6 +499,25 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
             </SectionCard>
           )}
 
+          {/* Sits directly above Finance Summary on purpose: stock is the
+              physical counterpart of the money below it, and Material
+              Payments belongs with materials rather than buried in the
+              finance button grid. */}
+          <SectionCard
+            icon={Package}
+            title="Materials & Stock"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => setSubView('inventory')}>
+                View all <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            }
+          >
+            <InventorySummary siteId={siteId} />
+            <Button size="sm" variant="outline" className="w-full" onClick={() => setSubView('materialPayments')}>
+              <Receipt className="w-4 h-4 mr-1" /> Material Payments
+            </Button>
+          </SectionCard>
+
           <SectionCard icon={Wallet} title="Finance Summary">
             {/* Money management (Budget, Actual costs, Payroll, Variance) is
                 base-tier - only Contract value and Latest payment cert stay
@@ -552,9 +618,6 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
                   <Users2 className="w-4 h-4 mr-1" /> Subcontractors
                 </Button>
               )}
-              <Button size="sm" variant="outline" onClick={() => setSubView('materialPayments')}>
-                <Receipt className="w-4 h-4 mr-1" /> Material Payments
-              </Button>
             </div>
           </SectionCard>
         </div>
@@ -574,6 +637,7 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
       {subView === 'qualityProgress' && <QualityProgressView siteId={siteId} onClose={() => setSubView(null)} />}
       {subView === 'heavyEquipment' && <HeavyEquipmentView siteId={siteId} onClose={() => setSubView(null)} />}
       {subView === 'materialPayments' && <MaterialPaymentsView siteId={siteId} onClose={() => setSubView(null)} />}
+      {subView === 'inventory' && <InventoryView siteId={siteId} onClose={() => setSubView(null)} />}
     </div>
   );
 }

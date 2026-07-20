@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Banknote,
   Wallet,
+  Package,
 } from 'lucide-react';
 import { useForemanSite } from '@/hooks/useSite';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
@@ -48,6 +49,7 @@ import { EnvironmentalView } from '@/components/forms/EnvironmentalView';
 import { PayrollView } from '@/components/forms/PayrollView';
 import { PettyCashForm } from '@/components/forms/PettyCashForm';
 import { HeavyEquipmentView } from '@/components/forms/HeavyEquipmentView';
+import { InventoryView } from '@/components/forms/InventoryView';
 
 type FormType =
   | 'attendance'
@@ -68,6 +70,7 @@ type FormType =
   | 'payroll'
   | 'pettyCash'
   | 'heavyEquipment'
+  | 'inventory'
   | null;
 
 interface TileConfig {
@@ -83,6 +86,9 @@ const OPERATIONS_TILES: TileConfig[] = [
   { key: 'attendance', icon: Users, label: 'Attendance', subtitle: 'Mark workers', color: 'text-purple-400', bg: 'bg-purple-400/15' },
   { key: 'delivery', icon: Truck, label: 'Materials in', subtitle: 'Log delivery', color: 'text-success', bg: 'bg-success/15' },
   { key: 'usage', icon: Hammer, label: 'Materials out', subtitle: 'Log usage', color: 'text-warning', bg: 'bg-warning/15' },
+  // Sits directly after Materials in/out on purpose - in / out / what's left
+  // reads as one group. Read-only: stock is derived from those two actions.
+  { key: 'inventory', icon: Package, label: 'Stock', subtitle: "What's on site", color: 'text-cyan-400', bg: 'bg-cyan-400/15' },
   { key: 'diary', icon: ClipboardList, label: 'Site diary', subtitle: 'Log activity', color: 'text-pink-400', bg: 'bg-pink-400/15' },
   { key: 'photo', icon: Camera, label: 'Photos', subtitle: 'Upload', color: 'text-muted-foreground', bg: 'bg-muted/30' },
   { key: 'tools', icon: Cog, label: 'Tools', subtitle: 'Check in/out', color: 'text-teal-400', bg: 'bg-teal-400/15' },
@@ -376,6 +382,7 @@ export default function ForemanDashboard() {
       {activeForm === 'payroll' && <PayrollView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'pettyCash' && <PettyCashForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'heavyEquipment' && <HeavyEquipmentView siteId={site.id} onClose={() => setActiveForm(null)} />}
+      {activeForm === 'inventory' && <InventoryView siteId={site.id} onClose={() => setActiveForm(null)} />}
     </div>
   );
 }

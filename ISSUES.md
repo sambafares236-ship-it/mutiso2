@@ -3,9 +3,17 @@
 ## How to use this file
 - Add new items under "Open" as they come up, newest on top
 - When resolved, move the item to "Resolved" with the date and a one-line note on the fix
+- **Also log bugs that are found and fixed within a single session** — write them straight into "Resolved" without ever appearing under "Open". This file doubles as the development record of what we've fixed, not just a queue of what's outstanding
 - Keep entries short: what's wrong, where, and any relevant context (file, error message, steps to reproduce)
+- For a fixed bug, include a **Lesson** line where there's a generalisable one — the class of mistake matters more than the individual fix
 
 ## Open
+
+- **Material Payments is one unbroken list of every delivery ever — needs period grouping/filtering**
+  - Area/files: `src/components/forms/MaterialPaymentsView.tsx`, `src/hooks/useMaterialPayments.tsx`
+  - Details: `useMaterialPayments()` returns every `materials_delivered` row for the site with its payments attached, and `MaterialPaymentsView` renders one `DeliveryCard` per row in a single flat scroll. On a site with a few months of deliveries this is unusable — the contractor has to scroll past paid items from weeks ago to reach today's unpaid ones, and there's no way to answer "what did we owe/pay this week".
+  - Proposed fix: group the list by period with a period selector (Today / This week / This month / Custom range — same preset shape `SiteReportView` already uses, so reuse that pattern rather than inventing a second date-range UI), with a per-period subtotal header (delivered value vs. paid) and collapsed sections for older periods. Grouping should key off the delivery's own `date` column, not `created_at` — see the resolved Site Report entry below for why that distinction matters here.
+  - Status: Open
 
 - **`site_milestone` rows are auto-seeded on every site but the table is Pro-gated — field_ops sites carry 5 invisible rows each**
   - Area/files: `site_milestone` auto-seed trigger on `sites`, `20260730091000_pro_tier_policies.sql`
@@ -71,6 +79,12 @@
 - Status: Open
 
 ## Resolved
+
+- **Site Report stamped every entry with `created_at` instead of its own event date — backfilled days read as same-day duplicates** — *resolved 2026-07-19*
+  - Area/files: `src/hooks/useSiteReport.tsx` (the `entries` mapping — attendance, deliveries, usage, diary, incidents, toolbox talks, inspections, petty cash)
+  - Details: Reported from the contractor's Site History as "our attendance people are marked thrice for a day's attendance" — the same worker appearing three times, all dated 18/07/2026. Not a duplicate insert: `attendance_log`'s `unique(site_id, worker_id, date)` makes triple-marking impossible, and a check of both dev and prod found no two `workers_master` rows sharing a name (the other candidate explanation, since that table is unique on `worker_id_number`, not `full_name`). The real cause is that the query **filters** on the `date` column but **displayed** `created_at`. Confirmed against real rows: three attendance records for 15, 16 and 17 July were all written within two seconds of each other during one catch-up session, so all three rendered as the same day. The `43` People Present count was correct throughout — only the labels lied.
+  - Fix: each entry now carries its own `date` column. The same mismatch was present in **eight** categories total, not just attendance — deliveries, materials used, site activities, incidents, toolbox talks, inspections and petty cash all have a real `date` column and were all showing `created_at`. Photos and defects genuinely have no `date` column, so `created_at` is correct there and was left alone; tool checkout/return already used their own real timestamps. `npm run build` (incl. `tsc -b`) clean.
+  - Lesson: **if a query filters on one column and displays another, those two columns must mean the same thing.** Here `date` is the event day and `created_at` is the write time, and they diverge in exactly the case this app treats as normal — a foreman logging several days of backlog in one sitting. The bug is invisible to anyone entering data the same day it happened, which is why it survived to a user report.
 
 - **Schedule importer misdated roughly every 7th ambiguous date (4-month error)** — *resolved 2026-07-18*
   - Area/files: `src/components/forms/ScheduleUploadDialog.tsx` (`parseDate`, new `detectDateOrder`)
