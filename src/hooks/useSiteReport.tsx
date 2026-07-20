@@ -185,7 +185,11 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           id: `attendance-${a.id}`,
           type: 'attendance' as const,
           title: `${a.worker?.full_name ?? 'Worker'} marked present`,
-          date: a.created_at,
+          // The attendance *day*, not when the row was written - a foreman
+          // catching up on several days in one sitting writes rows whose
+          // created_at all land on the same day, which made three distinct
+          // days' attendance read as three duplicates of the same day.
+          date: a.date,
         })),
         ...(visitors.data ?? []).map((v) => ({
           id: `visitor-${v.id}`,
@@ -210,7 +214,7 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           title: `Delivery: ${d.material_name}`,
           description: d.supplier,
           amount: `+${d.quantity} ${d.unit ?? ''}`,
-          date: d.created_at,
+          date: d.date,
         })),
         ...(usage.data ?? []).map((u) => ({
           id: `usage-${u.id}`,
@@ -218,14 +222,14 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           title: `Usage: ${u.material_name}`,
           description: u.description,
           amount: `-${u.quantity} ${u.unit ?? ''}`,
-          date: u.created_at,
+          date: u.date,
         })),
         ...(diary.data ?? []).map((d) => ({
           id: `diary-${d.id}`,
           type: 'diary' as const,
           title: d.title,
           description: d.description,
-          date: d.created_at,
+          date: d.date,
           images: diaryPhotoUrls.get(d.id),
         })),
         ...freestandingPhotos.map((p) => ({
@@ -241,21 +245,21 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           type: 'incident' as const,
           title: `Incident (${i.severity}): ${i.category}`,
           description: i.description,
-          date: i.created_at,
+          date: i.date,
           imageUrl: incidentUrls[idx],
         })),
         ...(talks.data ?? []).map((t) => ({
           id: `talk-${t.id}`,
           type: 'toolbox_talk' as const,
           title: `Toolbox talk: ${t.topic}`,
-          date: t.created_at,
+          date: t.date,
         })),
         ...(inspections.data ?? []).map((i) => ({
           id: `inspection-${i.id}`,
           type: 'inspection' as const,
           title: `Inspection: ${i.template?.name ?? 'Checklist'}`,
           description: i.flagged_count > 0 ? `${i.flagged_count} item(s) flagged` : 'All items passed',
-          date: i.created_at,
+          date: i.date,
         })),
         ...(defects.data ?? []).map((d, idx) => ({
           id: `defect-${d.id}`,
@@ -284,7 +288,7 @@ export function useSiteReport(siteId: string | undefined, startDate: string, end
           type: 'petty_cash' as const,
           title: `Petty cash: ${p.description}`,
           amount: `KES ${p.amount}`,
-          date: p.created_at,
+          date: p.date,
           imageUrl: pettyCashReceiptUrls[i],
         })),
       ];
