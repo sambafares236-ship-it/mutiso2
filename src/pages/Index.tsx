@@ -30,6 +30,7 @@ import { PaySubscriptionDialog } from '@/components/forms/PaySubscriptionDialog'
 import { CreateSiteWizard } from '@/components/forms/CreateSiteWizard';
 import { SubscriptionBillingView } from '@/components/forms/SubscriptionBillingView';
 import { SettingsView } from '@/components/forms/SettingsView';
+import { SiteSetupChecklist } from '@/components/SiteSetupChecklist';
 
 function RoleBadge() {
   const { isSuperAdmin, isContractor, isForeman } = useAuth();
@@ -226,6 +227,14 @@ function ContractorView() {
 
   const hasActiveSite = sites?.some((s) => s.status === 'active');
 
+  // The site the setup checklist speaks for: the first active one that hasn't
+  // lapsed. A locked-out site can't be set up anyway (owns_site() gates on
+  // subscription_end), so pointing someone at setup steps they'd be rejected
+  // for would be worse than showing nothing.
+  const setupSite = sites?.find(
+    (s) => s.status === 'active' && !isSubscriptionExpired(s.subscription_end),
+  );
+
   return (
     <div className="space-y-6 w-full max-w-lg">
       {!isLoading && !hasActiveSite && (
@@ -252,6 +261,18 @@ function ContractorView() {
             </>
           )}
         </div>
+      )}
+
+      {/* First-run guidance, on the earliest active site that still has setup
+          left. Scoped to one site so a contractor with several doesn't get a
+          stack of checklists; it removes itself once that site is set up. */}
+      {setupSite && (
+        <SiteSetupChecklist
+          siteId={setupSite.id}
+          siteName={setupSite.site_name}
+          tier={setupSite.subscription_tier as 'field_ops' | 'pro'}
+          isTrial={setupSite.is_trial}
+        />
       )}
 
       <Button variant="construction" size="touch" className="w-full" onClick={() => setShowWizard(true)}>
