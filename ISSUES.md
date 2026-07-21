@@ -9,6 +9,24 @@
 
 ## Open
 
+- **Two prod accounts had their phone number cleared and can't create sites or report payments until they set a new one**
+  - Area/files: `profiles.phone_number` on prod; `create_site_with_manual_payment()`, `request_manual_subscription_payment()`
+  - Details: Fallout from the phone-uniqueness fix below (2026-07-21). Three prod profiles shared `254700920985`; the number was kept by `mutiso ai <mutisoconstruction@gmail.com>` (2 bot-enabled sites, 3 completed payments) and cleared on `ian <fasamu98@gmail.com>` (3 sites) and `Fares Samba <faresmumo1@gmail.com>` (1 site). Both keep every site, payment and role, but **both payment RPCs raise when the caller's profile has no phone**, so neither account can create a site or report a payment until a number is set in Settings. They also receive no WhatsApp alerts in the meantime.
+  - Not a bug — the intended, user-chosen outcome of enforcing one number per account. Logged so it isn't rediscovered as a mystery failure.
+  - Status: Open — needs the owner to set new numbers, or a decision that those accounts are retired
+
+- **Signup silently drops the phone number if it's claimed between the availability check and the insert**
+  - Area/files: `src/pages/Auth.tsx` (`onSubmit`), `handle_new_user()` (`20260731091700`)
+  - Details: `is_phone_number_available()` is checked before `signUp()`, but the two aren't atomic. If the number is taken in between, `handle_new_user()` inserts the profile with `phone_number = null` rather than letting the unique violation abort signup — deliberate, because an unhandled violation inside the auth insert surfaces as an opaque *"Database error saving new user"* and breaks registration entirely. The client reads the profile back afterwards and warns, so it isn't silent in practice, but the account still exists without the number the user typed.
+  - Residual risk: if the read-back itself fails (offline, RLS timing), the warning is skipped and the user has an account that can't use the assistant with no indication why.
+  - Status: Open — acceptable tradeoff, revisit if it's ever observed in the wild
+
+- **Free trial has no admin visibility and no dedicated conversion nudge**
+  - Area/files: `SuperAdminView` (`Index.tsx`), `usePendingSites`/`useClientRoster` (`useSuperAdmin.tsx`), `sites.is_trial`
+  - Details: Trial sites are created `status = 'active'` with no payment row, so they never appear in the pending-approval queue and there is **no screen anywhere that lists who is currently on trial**. `useClientRoster` doesn't select `is_trial`. There's no way to see how many trials are running, how many converted, or which are about to lapse.
+  - Related: expiry messaging is generic. `isSubscriptionExpiringSoon()` uses a 5-day lookahead, so on a 7-day trial the "expiring soon" banner appears from day 3 and reads like a renewal warning rather than "your trial is ending, here's what you'll lose". Functional, but it's the highest-leverage conversion moment and currently says nothing trial-specific.
+  - Status: Open
+
 - **Event-notification webhooks (severe incident, permit, variation order) still fire for a lapsed subscription**
   - Area/files: the `notify_*` trigger functions (`20260728090200`, `20260731090100`, `20260731090200`), not the n8n workflows
   - Details: Found while gating the WhatsApp digests on 2026-07-20 (see the resolved entry below). These three are correctly **un**gated by tier — severe-incident alerts are an explicit Field Ops & Safety bullet on the pricing page — but none of them check `subscription_end`, so a site whose subscription has lapsed keeps receiving them. `sites.status` is never flipped on lapse, so `status = 'active'` doesn't catch it. Not urgent: 0 prod sites are currently expired, and an expired site's owner is already locked out of the app itself by `owns_site()`, so little new data would arrive to trigger an alert.
@@ -33,11 +51,18 @@
   - Still missing: (1) **contractors onboarded before 2026-07-18 never received that message**, so they have no thread and no number; (2) there is no "Test your assistant" affordance to re-verify later — a `wa.me/<number>?text=Hi` button in Settings or Billing would cover both, but needs the bot's real number as config (currently only implied by the Evolution instance).
   - Status: Open
 
-- **WhatsApp bot's send endpoint is a free ngrok tunnel**
-  - Area/files: every WhatsApp-sending node across all n8n workflows; Evolution API credential `vpRac8Wc96KOUhNz`
+- **WhatsApp bot's send endpoint is a free ngrok tunnel on a local machine — this outage has now happened twice**
+  - Area/files: every WhatsApp-sending node across all n8n workflows; Evolution API credential `vpRac8Wc96KOUhNz`; local Docker + ngrok on the dev machine
   - Details: All outbound WhatsApp posts to `https://flatworm-corporal-curing.ngrok-free.dev/message/sendText/mutiso-test5`. Free ngrok URLs rotate, and the instance is named `mutiso-test5` (a test instance). When that hostname changes, **every** WhatsApp send across all 14 workflows breaks simultaneously — alerts, digests, welcome/renewal, reminders, and the bot. Now that prod carries real paying clients this is the single most fragile piece of the notification stack.
-  - Fix: move Evolution to a stable host (paid ngrok domain, or host it properly) and rename the instance off `-test5`. Infra decision, not a code change.
-  - Status: Open
+  - **The risk materialised on 2026-07-19/20**, and the failure mode is worse than "URL rotates": n8n is in the cloud but Evolution is *local*, so anything that stops the local machine stops all outbound WhatsApp while inbound still works. Three separate stoppages in one session:
+    1. **Docker Desktop's engine died** (the `docker-desktop` WSL2 distro stopped); `docker restart` failed outright with "Docker Desktop is unable to start". Fixed by stopping Docker Desktop, `wsl --shutdown`, relaunching.
+    2. **ngrok wasn't running and its binary was gone** — a stale PATH entry pointed at an empty winget package dir. Reinstalling gave 3.3.1, which the account rejects (`ERR_NGROK_121`, minimum 3.20.0); `ngrok update` → 3.39.9 fixed it. Note 3.3.1 uses `--domain`, newer versions `--url`.
+    3. **The WhatsApp session itself was lost** after a PC reboot — Evolution emitted QR codes indefinitely (`qrcodeCount` climbing, `connectionStatus: connecting`) instead of resuming, and needed a re-pair from the phone. Restarting the container cannot fix this; only scanning can.
+    During all of this n8n executions **succeeded** while the reply HTTP node 404'd against the dead tunnel (`ERR_NGROK_3200`), so from the contractor's side the bot was simply silent — and the `Reply - Bot Unavailable` fallback failed too, since it posts to the same dead URL.
+  - Partial mitigation in place: a Windows Scheduled Task `ngrok-evolution-tunnel` (at-logon, hidden, restart every 1 min × 999) keeps the tunnel up on the pinned static domain, so the URL survives reboots. Verified by killing ngrok and confirming the task restored it end-to-end. Docker Desktop already auto-starts via an HKCU `Run` entry and all three containers are `restart: always`. **Both trigger at logon, not at boot** — if the machine reboots and sits at the login screen, nothing starts.
+  - Fix (unchanged): move Evolution to a stable host and rename the instance off `-test5`. Infra decision, not a code change.
+  - Lesson: a cloud workflow whose reply path depends on a laptop is only as available as that laptop. The fallback node needs to not share the single point of failure it exists to cover.
+  - Status: Open — mitigated, not solved
 
 - **Gemini free-tier daily request cap not measured**
   - Area/files: n8n credential `Gemini (Mutiso Chatbot)` (`qktCKtVd8onei9Ya`), chatbot model node
@@ -85,6 +110,16 @@
 - Status: Open
 
 ## Resolved
+
+- **Three accounts shared one phone number, so the bot resolved a paying customer to an unpaid account and told them their plan didn't include the assistant** — *resolved 2026-07-21*
+  - Area/files: new `20260731091700_unique_profile_phone_number.sql` (`normalize_ke_phone()`, `profiles_normalized_phone_unique`, `handle_new_user()`) and `20260731091900_phone_availability_check.sql`; `src/pages/Auth.tsx`, `src/hooks/useProfile.tsx`; n8n `Resolve Contractor` (`Wp3iUU8iuN3yfxee`)
+  - Details: Reported as "I added the same number to this site, its not texting back" — a site (`school`) had just been paid for *with* the WhatsApp add-on, the payment confirmation WhatsApp greeted "Hi mutiso ai", and the very next message still got "Your plan doesn't include the WhatsApp assistant". The user's own hypothesis — that it was the shared number — was correct.
+    The bot identifies a contractor **purely by phone number**, and `Resolve Contractor` ends in `limit 1` with **no `ORDER BY`**. Prod had three profiles on `254700920985`: `ian` (3 sites, 0 with the add-on), `Fares Samba` (1 site, 0), and `mutiso ai` (2 sites, **2** with the add-on, 3 completed payments). Postgres returned `ian`, so the branch was correct for the account it found and wrong for the human. Nothing enforced uniqueness — `profiles.phone_number` had no constraint, and each signup used a different email, which is all Supabase Auth checks.
+    With no `ORDER BY` the chosen row isn't stable, which is why the bot appeared to work intermittently across the session: earlier tests happened to resolve to an account that *did* have the add-on.
+  - Fix: uniqueness enforced on the **normalized** number via a partial unique index over `normalize_ke_phone(phone_number)` — `0712345678`, `+254 712 345 678` and `712345678` are one phone to a human and to WhatsApp but three strings to a plain index. `normalize_ke_phone()` mirrors `normalizeKenyanPhone()` in `src/lib/phone.ts`. Existing values were normalized first (a number stored as `07…` could never match an inbound `254…`, silently orphaning that contractor), then duplicates resolved by a deterministic rule — most bot-enabled sites, then most completed payments, then most sites, then oldest — which keeps `mutiso ai` on prod without hardcoding a UUID, so it reproduces on dev. Signup now pre-checks via `is_phone_number_available()` and offers sign-in instead.
+  - A self-lock caught before shipping: `handle_new_user()` runs **inside** the `auth.users` insert, so an unhandled unique violation there would abort signup entirely and surface as an opaque *"Database error saving new user"*. It now drops the phone instead of failing — the account is created, the client reads the profile back and warns. Same class as the `owns_site()` self-lock in `20260731090600`: tightening a shared thing broke an unrelated caller.
+  - Verified: cross-format duplicates are rejected (`0700111222` blocked against an existing `254700111222`, constraint `profiles_normalized_phone_unique`); 24 dev duplicates and the 3 prod duplicates resolved with 0 remaining; `is_phone_number_available()` returns false for the same number in `254…`, `07…` and spaced form from an anonymous client; prod left with `mutiso ai` holding the number and all sites intact. End-to-end, the same question that failed in the screenshot — *"hows school doing?"* — now routes through `Send Agent Reply` with real site data instead of `Not Subscribed Reply`.
+  - Lessons: **(1)** `LIMIT 1` with no `ORDER BY` on a non-unique key is a silent, *non-deterministic* correctness bug — it produces a plausible answer, and the answer can change between runs, which is exactly what made this look intermittent rather than broken. If a query assumes one row, something must guarantee one row. **(2)** If a column is used as an identity (here, "which contractor is this?"), the schema has to say so; a convention that it's unique is not uniqueness. **(3)** Normalize before you constrain — a unique index over raw text would have permitted the same phone in three formats and left the original bug fully reachable.
 
 - **The WhatsApp bot was a paid add-on that nothing enforced — any active site could use it free, and a lapsed subscription kept it forever** — *resolved 2026-07-20*
   - Area/files: new `20260731091600_gate_bot_on_whatsapp_subscription.sql` (`site_whatsapp_bot_active()`, `bot_query_site_data()`); n8n workflow "WhatsApp Contractor Chatbot" (`Wp3iUU8iuN3yfxee`) — `Resolve Contractor`, new `Has Any Site` + `Not Subscribed Reply`
