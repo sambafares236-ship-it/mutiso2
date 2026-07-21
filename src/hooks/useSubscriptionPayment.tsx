@@ -82,6 +82,37 @@ export function useCreateSiteWithManualPayment() {
   });
 }
 
+// Starts the one free trial this contractor gets: a Field Ops site with the
+// WhatsApp assistant, active immediately for 7 days and with no payment row
+// at all (see 20260731091800). Eligibility lives on the profile rather than
+// being inferred from their sites, so deleting a trial site doesn't hand out
+// a second trial.
+export function useStartTrialSite() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      site_name,
+      location,
+    }: {
+      site_name: string;
+      location?: string;
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('start_trial_site', {
+        p_site_name: site_name,
+        p_location: location || undefined,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminSites'] });
+      // trial_used_at just changed, so anything gating on eligibility must refetch.
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
 // Full payment history for one site - powers the Billing view. Same RLS
 // policy as useSubscriptionPaymentStatus/usePendingManualPayments
 // ("Site owner can view their subscription payments"), now routed through
