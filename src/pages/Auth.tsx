@@ -77,13 +77,50 @@ export default function Auth() {
           setError('agreed_to_terms', { message: 'You must agree to the Terms and Privacy Policy' });
           return;
         }
+
+        // A phone number can only belong to one account (the WhatsApp assistant
+        // identifies a contractor by it), and signing up with a different email
+        // is otherwise enough to create a second account for the same person.
+        // Catch that here so they're sent to sign-in rather than ending up with
+        // a duplicate identity they can't use the assistant from.
+        const { data: phoneAvailable, error: availabilityError } = await supabase.rpc(
+          'is_phone_number_available',
+          { p_phone: normalizedPhone },
+        );
+        // A failed check shouldn't block signup - the unique index is the real
+        // guarantee, and handle_new_user() degrades safely either way.
+        if (!availabilityError && phoneAvailable === false) {
+          setError('phone_number', {
+            message: 'This number already has an account. Sign in instead, or use a different number.',
+          });
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
           options: { data: { full_name: values.full_name, phone_number: normalizedPhone } },
         });
         if (error) throw error;
-        toast.success('Account created', { description: 'Welcome to Mutiso.AI.' });
+
+        // Backstop for the race between the check above and the insert: if the
+        // number got claimed in between, handle_new_user() drops it rather than
+        // failing the whole signup, which would otherwise leave the account
+        // silently unable to use the assistant.
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+          .maybeSingle();
+
+        if (newProfile && !newProfile.phone_number) {
+          toast.warning('Account created, but your phone number was not saved', {
+            description:
+              'That number was just registered to another account. Add a different one in Settings to use the WhatsApp assistant.',
+          });
+        } else {
+          toast.success('Account created', { description: 'Welcome to Mutiso.AI.' });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: values.email,

@@ -81,7 +81,19 @@ export function useUpdateProfile() {
         .single();
       // An RLS-filtered UPDATE reports no error but affects nothing, so .single()
       // is what actually proves the row was written.
-      if (error) throw error;
+      if (error) {
+        // A phone number may only belong to one account: the WhatsApp assistant
+        // identifies a contractor purely by their number, so a shared one is
+        // genuinely ambiguous (see 20260731091700_unique_profile_phone_number).
+        // Postgres reports this as a raw unique-violation on an index name that
+        // means nothing to a contractor, so translate it here.
+        if (error.code === '23505' && error.message?.includes('profiles_normalized_phone_unique')) {
+          throw new Error(
+            'That phone number is already registered to another Mutiso.AI account. Use a different number, or sign in to the account that already uses it.',
+          );
+        }
+        throw error;
+      }
 
       // The sign-in address is separate from the notification address above.
       // Only touch Auth when the email genuinely changed, so a user editing

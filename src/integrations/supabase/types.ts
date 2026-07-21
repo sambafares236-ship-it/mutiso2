@@ -1236,6 +1236,7 @@ export type Database = {
           id: string
           mpesa_phone_number: string | null
           phone_number: string | null
+          trial_used_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1245,6 +1246,7 @@ export type Database = {
           id: string
           mpesa_phone_number?: string | null
           phone_number?: string | null
+          trial_used_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1254,6 +1256,7 @@ export type Database = {
           id?: string
           mpesa_phone_number?: string | null
           phone_number?: string | null
+          trial_used_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1671,6 +1674,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          is_trial: boolean
           latitude: number | null
           location: string | null
           location_recapture_requested_at: string | null
@@ -1691,6 +1695,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_trial?: boolean
           latitude?: number | null
           location?: string | null
           location_recapture_requested_at?: string | null
@@ -1711,6 +1716,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_trial?: boolean
           latitude?: number | null
           location?: string | null
           location_recapture_requested_at?: string | null
@@ -2552,6 +2558,7 @@ export type Database = {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
+      is_phone_number_available: { Args: { p_phone: string }; Returns: boolean }
       is_site_assignee: {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
@@ -2587,6 +2594,7 @@ export type Database = {
         Args: { p_line_id: string }
         Returns: undefined
       }
+      normalize_ke_phone: { Args: { p_phone: string }; Returns: string }
       owns_baseline_site: {
         Args: { _baseline_id: string; _user_id: string }
         Returns: boolean
@@ -2629,6 +2637,11 @@ export type Database = {
       }
       save_schedule_baseline: {
         Args: { p_label?: string; p_site_id: string }
+        Returns: string
+      }
+      site_whatsapp_bot_active: { Args: { _site_id: string }; Returns: boolean }
+      start_trial_site: {
+        Args: { p_location?: string; p_site_name: string }
         Returns: string
       }
       verify_defect: { Args: { p_defect_id: string }; Returns: undefined }
