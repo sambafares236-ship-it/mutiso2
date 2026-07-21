@@ -24,10 +24,9 @@ export interface SiteSetupProgress {
  * and one real day logged.
  *
  * The schedule step is Pro-only and deliberately conditional. `activity` is
- * gated by owns_pro_site(), so on a field_ops site - which includes every free
- * trial - inserting one is rejected by RLS. Listing it there would hand a new
- * contractor a checklist item they physically cannot complete, which is worse
- * than not mentioning it at all.
+ * gated by owns_pro_site(), so on a field_ops site inserting one is rejected
+ * by RLS. Listing it there would hand a new contractor a checklist item they
+ * physically cannot complete, which is worse than not mentioning it at all.
  *
  * Counts only (`head: true`), never rows: this runs on the dashboard for the
  * contractor's first site and only needs existence, so there's no reason to

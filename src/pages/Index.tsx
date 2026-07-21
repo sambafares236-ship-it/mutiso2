@@ -271,7 +271,6 @@ function ContractorView() {
           siteId={setupSite.id}
           siteName={setupSite.site_name}
           tier={setupSite.subscription_tier as 'field_ops' | 'pro'}
-          isTrial={setupSite.is_trial}
         />
       )}
 

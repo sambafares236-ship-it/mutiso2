@@ -3,14 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Building, X, Loader2, Send, CheckCircle2, MessageCircle, Sparkles, Check } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { useCreateSiteWithManualPayment, useStartTrialSite } from '@/hooks/useSubscriptionPayment';
+import { Building, X, Loader2, Send, CheckCircle2, MessageCircle } from 'lucide-react';
+import { useCreateSiteWithManualPayment } from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TIER_PRICING, TIER_LABEL, type SubscriptionTier } from '@/lib/pricing';
 import { MANUAL_PAYMENT_PHONE_DISPLAY } from '@/lib/payment';
 import { formatKES } from '@/lib/utils';
@@ -22,13 +19,13 @@ const detailsSchema = z.object({
 });
 type DetailsValues = z.infer<typeof detailsSchema>;
 
-// A plan is either the free trial or a (tier, bot) pair. The WhatsApp add-on
-// used to be an unchecked checkbox on the payment step, which is why every
-// site created so far had it switched off - people skipped straight past it
-// without ever registering that the assistant existed. It is now one of the
+// A plan is a (tier, bot) pair. The WhatsApp add-on used to be an unchecked
+// checkbox on the payment step, which is why every site created before this
+// had it switched off - people skipped past it without registering that the
+// assistant existed, then reported the bot as broken. It is now one of the
 // plans you pick, so choosing it is a decision rather than something you have
 // to notice.
-type PlanId = 'trial' | 'field_ops' | 'field_ops_bot' | 'pro' | 'pro_bot';
+type PlanId = 'field_ops' | 'field_ops_bot' | 'pro' | 'pro_bot';
 
 interface PlanOption {
   id: PlanId;
@@ -37,7 +34,7 @@ interface PlanOption {
   price: number;
 }
 
-const PAID_PLANS: PlanOption[] = [
+const PLANS: PlanOption[] = [
   { id: 'field_ops', tier: 'field_ops', bot: false, price: TIER_PRICING.field_ops.base },
   { id: 'field_ops_bot', tier: 'field_ops', bot: true, price: TIER_PRICING.field_ops.withBot },
   { id: 'pro', tier: 'pro', bot: false, price: TIER_PRICING.pro.base },
@@ -48,12 +45,16 @@ interface CreateSiteWizardProps {
   onClose: () => void;
 }
 
-// Three-step overlay. Nothing is written to the database until the final
-// submit of whichever branch you take - going back or cancelling leaves no
-// trace, since a paid site row is not allowed to exist without a payment
-// record beside it (create_site_with_manual_payment() inserts both
-// atomically). The trial is the one deliberate exception: start_trial_site()
-// creates an active site with no payment at all, once per contractor.
+// Three-step overlay: details -> plan -> payment. Nothing is written to the
+// database until the final submit, so going back or cancelling leaves no
+// trace - a site row is not allowed to exist without a payment record beside
+// it (create_site_with_manual_payment() inserts both atomically).
+//
+// Payment is required up front; there is no free trial. The trial schema
+// (sites.is_trial, profiles.trial_used_at, start_trial_site()) is deliberately
+// left in place but dormant and unreachable from the UI, so re-enabling it
+// later is a frontend change rather than another migration.
+//
 // Manual payment only for this pass - PAYMENT_MODE is 'manual' in
 // src/lib/payment.ts, the STK path stays dormant until production Daraja
 // credentials are live.
@@ -63,15 +64,7 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
   const [plan, setPlan] = useState<PlanId | null>(null);
   const [mpesaCode, setMpesaCode] = useState('');
 
-  const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
   const createSite = useCreateSiteWithManualPayment();
-  const startTrial = useStartTrialSite();
-
-  // One trial per contractor, ever - enforced in start_trial_site(); this only
-  // decides whether to offer it.
-  const trialAvailable = !!profile && profile.trial_used_at === null;
-  const hasPhone = !!profile?.phone_number && profile.phone_number.trim() !== '';
 
   const {
     register,
@@ -84,28 +77,7 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
     setStep('plan');
   };
 
-  const selected = PAID_PLANS.find((p) => p.id === plan) ?? null;
-
-  const handlePlanContinue = async () => {
-    if (!details || !plan) return;
-
-    if (plan === 'trial') {
-      try {
-        await startTrial.mutateAsync({ site_name: details.site_name, location: details.location });
-        setStep('done');
-        toast.success('Free trial started', {
-          description: `${details.site_name} is live for 7 days, WhatsApp assistant included.`,
-        });
-      } catch (err) {
-        toast.error('Could not start trial', {
-          description: err instanceof Error ? err.message : undefined,
-        });
-      }
-      return;
-    }
-
-    setStep('payment');
-  };
+  const selected = PLANS.find((p) => p.id === plan) ?? null;
 
   const handleReportPayment = async () => {
     if (!details || !selected) return;
@@ -171,90 +143,49 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
             </button>
             <p className="text-sm text-foreground">{details.site_name}</p>
 
-            {profileLoading ? (
-              <div className="space-y-3">
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {trialAvailable && (
-                  <button
-                    type="button"
-                    onClick={() => setPlan('trial')}
-                    aria-pressed={plan === 'trial'}
-                    className={cn(
-                      'w-full text-left rounded-lg border-2 p-4 transition-colors',
-                      plan === 'trial'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-secondary/30 hover:border-primary/50',
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 font-medium text-foreground">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        7-day free trial
-                      </span>
-                      <span className="font-display text-xl text-primary">FREE</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {TIER_LABEL.field_ops} with the WhatsApp assistant. Live straight away, no
-                      payment and no waiting for approval.
+            <div className="space-y-3">
+              {PLANS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPlan(p.id)}
+                  aria-pressed={plan === p.id}
+                  className={cn(
+                    'w-full text-left rounded-lg border-2 p-4 transition-colors',
+                    plan === p.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-secondary/30 hover:border-primary/50',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">{TIER_LABEL[p.tier]}</span>
+                    <span className="font-display text-xl text-primary">
+                      {formatKES(p.price)}
+                      <span className="text-xs text-muted-foreground font-sans">/mo</span>
+                    </span>
+                  </div>
+                  {p.bot ? (
+                    <p className="text-xs text-success mt-1 flex items-center gap-1.5">
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Includes the WhatsApp assistant
                     </p>
-                    {!hasPhone && (
-                      <p className="text-xs text-destructive mt-2">
-                        Add your WhatsApp number in Settings first &mdash; the assistant needs it to
-                        recognise you.
-                      </p>
-                    )}
-                  </button>
-                )}
-
-                {PAID_PLANS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPlan(p.id)}
-                    aria-pressed={plan === p.id}
-                    className={cn(
-                      'w-full text-left rounded-lg border-2 p-4 transition-colors',
-                      plan === p.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-secondary/30 hover:border-primary/50',
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-foreground">{TIER_LABEL[p.tier]}</span>
-                      <span className="font-display text-xl text-primary">
-                        {formatKES(p.price)}
-                        <span className="text-xs text-muted-foreground font-sans">/mo</span>
-                      </span>
-                    </div>
-                    {p.bot ? (
-                      <p className="text-xs text-success mt-1 flex items-center gap-1.5">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        Includes the WhatsApp assistant
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Without the WhatsApp assistant
-                      </p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Without the WhatsApp assistant
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
 
             <Button
               variant="construction"
               size="touch"
               className="w-full"
-              onClick={handlePlanContinue}
-              disabled={!plan || startTrial.isPending || (plan === 'trial' && !hasPhone)}
+              onClick={() => setStep('payment')}
+              disabled={!plan}
             >
-              {startTrial.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              {plan === 'trial' ? 'Start Free Trial' : 'Continue to Payment'}
+              Continue to Payment
             </Button>
           </div>
         )}
@@ -312,29 +243,11 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
         {step === 'done' && (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
             <CheckCircle2 className="w-10 h-10 text-success" />
-            {plan === 'trial' ? (
-              <>
-                <p className="text-foreground font-medium">Your 7-day trial is live</p>
-                <div className="text-sm text-muted-foreground max-w-xs space-y-2">
-                  <p>
-                    {details?.site_name} is ready to use right now &mdash; no approval needed.
-                  </p>
-                  <p className="flex items-start gap-1.5 text-left">
-                    <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                    Message the WhatsApp assistant from your registered number and ask how the site
-                    is doing.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-foreground font-medium">Site created</p>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  We&apos;ll confirm your payment and an admin will review the site shortly. You can
-                  check its status from Your Sites.
-                </p>
-              </>
-            )}
+            <p className="text-foreground font-medium">Site created</p>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              We&apos;ll confirm your payment and an admin will review the site shortly. You can
+              check its status from Your Sites.
+            </p>
             <Button variant="outline" onClick={onClose}>
               Done
             </Button>

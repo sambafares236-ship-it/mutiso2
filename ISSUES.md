@@ -21,11 +21,11 @@
   - Residual risk: if the read-back itself fails (offline, RLS timing), the warning is skipped and the user has an account that can't use the assistant with no indication why.
   - Status: Open — acceptable tradeoff, revisit if it's ever observed in the wild
 
-- **Free trial has no admin visibility and no dedicated conversion nudge**
-  - Area/files: `SuperAdminView` (`Index.tsx`), `usePendingSites`/`useClientRoster` (`useSuperAdmin.tsx`), `sites.is_trial`
-  - Details: Trial sites are created `status = 'active'` with no payment row, so they never appear in the pending-approval queue and there is **no screen anywhere that lists who is currently on trial**. `useClientRoster` doesn't select `is_trial`. There's no way to see how many trials are running, how many converted, or which are about to lapse.
-  - Related: expiry messaging is generic. `isSubscriptionExpiringSoon()` uses a 5-day lookahead, so on a 7-day trial the "expiring soon" banner appears from day 3 and reads like a renewal warning rather than "your trial is ending, here's what you'll lose". Functional, but it's the highest-leverage conversion moment and currently says nothing trial-specific.
-  - Status: Open
+- **Free-trial schema is live but dormant and unreachable — if it's ever re-enabled, it still has no admin visibility**
+  - Area/files: `sites.is_trial`, `profiles.trial_used_at`, `start_trial_site()` (`20260731091800`); `useStartTrialSite()` (marked DORMANT); `useClientRoster` (`useSuperAdmin.tsx`)
+  - Details: The 7-day trial was built and then withdrawn the same day in favour of payment-first onboarding, **before anyone used it** (prod: 0 trial sites, 0 profiles with `trial_used_at`). The reversal was frontend-only by choice — the columns and RPC remain and still work, but nothing in the UI can reach them, so re-enabling is a UI change rather than another migration. `useStartTrialSite()` is kept in sync with the RPC deliberately; **delete both together or neither.**
+  - Still true if it's ever switched back on: trial sites are `status = 'active'` with no payment row, so they never hit the pending-approval queue and **no screen lists who is on trial** — `useClientRoster` doesn't select `is_trial`. And `isSubscriptionExpiringSoon()`'s 5-day lookahead against a 7-day trial means the "expiring soon" banner appears from day 3 reading like a renewal warning, not "your trial is ending".
+  - Status: Open — dormant, no action needed unless the trial returns
 
 - **Event-notification webhooks (severe incident, permit, variation order) still fire for a lapsed subscription**
   - Area/files: the `notify_*` trigger functions (`20260728090200`, `20260731090100`, `20260731090200`), not the n8n workflows

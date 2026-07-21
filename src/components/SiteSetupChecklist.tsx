@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Sparkles } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { useSiteSetupProgress } from '@/hooks/useSiteSetupProgress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -8,8 +8,6 @@ interface SiteSetupChecklistProps {
   siteName: string;
   /** Gates the Pro-only schedule step - see useSiteSetupProgress. */
   tier: 'field_ops' | 'pro';
-  /** Trial sites get a nudge that the clock is running. */
-  isTrial?: boolean;
 }
 
 /**
@@ -19,7 +17,7 @@ interface SiteSetupChecklistProps {
  * the first day, not a permanent dashboard fixture, so there's deliberately no
  * dismiss control to manage or persist.
  */
-export function SiteSetupChecklist({ siteId, siteName, tier, isTrial }: SiteSetupChecklistProps) {
+export function SiteSetupChecklist({ siteId, siteName, tier }: SiteSetupChecklistProps) {
   const { data, isLoading } = useSiteSetupProgress(siteId, tier);
 
   if (isLoading) {
@@ -42,14 +40,9 @@ export function SiteSetupChecklist({ siteId, siteName, tier, isTrial }: SiteSetu
     <div className="card-industrial p-4 border-2 border-primary/50 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-foreground flex items-center gap-2">
-            {isTrial && <Sparkles className="w-4 h-4 text-primary" />}
-            Set up {siteName}
-          </p>
+          <p className="font-medium text-foreground">Set up {siteName}</p>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {isTrial
-              ? 'Get these done while your trial is running to see what the app actually does.'
-              : 'A few things to do before the app can work for you.'}
+            A few things to do before the app can work for you.
           </p>
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap">

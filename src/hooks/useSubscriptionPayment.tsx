@@ -82,7 +82,16 @@ export function useCreateSiteWithManualPayment() {
   });
 }
 
-// Starts the one free trial this contractor gets: a Field Ops site with the
+// DORMANT - nothing calls this. The 7-day free trial was built and then
+// deliberately withdrawn in favour of payment from the start; onboarding is
+// payment-first again (CreateSiteWizard has no trial option and the landing
+// page makes no trial offer). The backing schema (sites.is_trial,
+// profiles.trial_used_at, start_trial_site()) was left in place rather than
+// dropped, so re-enabling the trial is a UI change rather than another
+// migration. Kept in sync with that RPC on purpose - delete both together or
+// neither.
+//
+// Starts the one free trial a contractor gets: a Field Ops site with the
 // WhatsApp assistant, active immediately for 7 days and with no payment row
 // at all (see 20260731091800). Eligibility lives on the profile rather than
 // being inferred from their sites, so deleting a trial site doesn't hand out

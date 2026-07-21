@@ -11,7 +11,6 @@ import {
   MessageCircle,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -158,24 +157,15 @@ export default function Landing() {
             Attendance, safety compliance, materials, payroll, and progress tracking for your construction sites —
             plus a WhatsApp assistant that answers "how's my site doing" in real time.
           </p>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm text-foreground">
-              Start with a <span className="font-medium text-primary">7-day free trial</span> —
-              WhatsApp assistant included
-            </span>
-          </div>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="construction" size="xl" onClick={() => navigate('/auth')}>
-              Start Free Trial <ArrowRight className="w-5 h-5 ml-1" />
+              Get Started <ArrowRight className="w-5 h-5 ml-1" />
             </Button>
             <Button variant="outline" size="xl" onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}>
               See Pricing
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            No payment to start. After 7 days, billed monthly via M-Pesa.
-          </p>
+          <p className="mt-3 text-xs text-muted-foreground">Billed monthly via M-Pesa once your site is approved.</p>
         </motion.div>
       </section>
 
@@ -245,16 +235,6 @@ export default function Landing() {
           <h2 className="font-display text-2xl text-foreground text-center">Simple, per-site pricing</h2>
           <p className="text-center text-muted-foreground mt-2">Billed monthly via M-Pesa, per site, once your site is approved.</p>
 
-          <div className="mt-8 max-w-2xl mx-auto card-industrial p-6 border-2 border-primary/50 text-center">
-            <p className="flex items-center justify-center gap-2 font-display text-xl text-foreground">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Start free for 7 days
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your first site runs on Field Ops &amp; Safety <span className="text-foreground">with the WhatsApp assistant included</span> — live immediately, no payment and no approval wait. Pay only when the 7 days are up.
-            </p>
-          </div>
-
           <div className="mt-8 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="card-industrial p-6">
               <p className="font-display text-xl text-foreground">Field Ops & Safety</p>
@@ -291,11 +271,8 @@ export default function Landing() {
           </div>
           <div className="mt-8 text-center">
             <Button variant="construction" size="xl" onClick={() => navigate('/auth')}>
-              Start Free Trial <ArrowRight className="w-5 h-5 ml-1" />
+              Get Started <ArrowRight className="w-5 h-5 ml-1" />
             </Button>
-            <p className="mt-3 text-xs text-muted-foreground">
-              One free trial per account. No card, no payment details needed.
-            </p>
           </div>
         </div>
       </section>
