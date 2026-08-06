@@ -26,18 +26,12 @@ export default function Privacy() {
           <h1 className="font-display text-2xl text-primary">MUTISO.AI — Privacy Policy</h1>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Draft — last updated 2026-07-13. This is a plain-language draft, not a substitute for legal review. It has
-          not been reviewed by a lawyer, and [COMPANY NAME]'s registration with Kenya's Office of the Data Protection
-          Commissioner (ODPC) is [ODPC REGISTRATION — PENDING].
-        </p>
-
         <div className="card-industrial p-5 space-y-5 text-sm text-foreground leading-relaxed">
           <section>
             <h2 className="font-display text-lg text-foreground mb-1">1. Data controller</h2>
             <p>
-              [COMPANY NAME], registered at [REGISTERED ADDRESS], is the data controller for personal data processed
-              through Mutiso.AI. Contact for data protection queries: [CONTACT EMAIL].
+              Jenga Technologies, registered in Nairobi, Kenya, is the data controller for personal data processed
+              through Mutiso.AI. Contact for data protection queries: mutisoconstruction@gmail.com.
             </p>
           </section>
 
@@ -91,7 +85,7 @@ export default function Privacy() {
             <h2 className="font-display text-lg text-foreground mb-1">7. Your rights</h2>
             <p>
               Under Kenya's Data Protection Act, 2019, you have the right to access, correct, delete, or object to
-              processing of your personal data, and to lodge a complaint with the ODPC. Contact [CONTACT EMAIL] to
+              processing of your personal data, and to lodge a complaint with the ODPC. Contact mutisoconstruction@gmail.com to
               exercise these rights.
             </p>
           </section>
