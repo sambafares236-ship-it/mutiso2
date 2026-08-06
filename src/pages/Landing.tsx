@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,10 +11,23 @@ import {
   MessageCircle,
   CheckCircle2,
   ArrowRight,
+  Menu,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { TIER_PRICING } from '@/lib/pricing';
+
+const WHATSAPP_NUMBER = '254700920985'; // 0700920985 in international format, no leading 0/+
+const CONTACT_EMAIL = 'mutisoconstruction@gmail.com';
+
+const NAV_LINKS = [
+  { label: 'Home', id: 'home' },
+  { label: 'About', id: 'about' },
+  { label: 'Pricing', id: 'pricing' },
+  { label: 'Contact', id: 'contact' },
+];
 
 const FEATURES = [
   {
@@ -80,12 +93,22 @@ function currentOrigin() {
 export default function Landing() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user) {
       navigate('/app', { replace: true });
     }
   }, [user, isLoading, navigate]);
+
+  const scrollToId = (id: string) => {
+    if (id === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
+    setMobileMenuOpen(false);
+  };
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -135,20 +158,71 @@ export default function Landing() {
       <div className="caution-stripe w-full" />
 
       {/* Nav */}
-      <header className="container flex items-center justify-between h-16 px-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <HardHat className="w-4 h-4 text-primary-foreground" />
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
+        <div className="container flex items-center justify-between h-16 px-4">
+          <button
+            onClick={() => scrollToId('home')}
+            className="flex items-center gap-2"
+            aria-label="Mutiso.AI home"
+          >
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <HardHat className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-display text-lg text-primary">MUTISO.AI</span>
+          </button>
+
+          {/* Desktop nav links */}
+          <nav className="hidden sm:flex items-center gap-6">
+            {NAV_LINKS.map((link) => (
+              <button
+                key={link.id}
+                onClick={() => scrollToId(link.id)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="hidden sm:block">
+            <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+              Sign In
+            </Button>
           </div>
-          <span className="font-display text-lg text-primary">MUTISO.AI</span>
+
+          {/* Mobile menu trigger */}
+          <div className="sm:hidden">
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Open menu">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64">
+                <nav className="mt-10 flex flex-col gap-1">
+                  {NAV_LINKS.map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => scrollToId(link.id)}
+                      className="text-left px-2 py-3 text-base font-medium text-foreground hover:text-primary transition-colors border-b border-border"
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                  <SheetClose asChild>
+                    <Button variant="construction" className="mt-6" onClick={() => navigate('/auth')}>
+                      Sign In
+                    </Button>
+                  </SheetClose>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
-          Sign In
-        </Button>
       </header>
 
       {/* Hero */}
-      <section className="container px-4 pt-10 pb-16 text-center max-w-3xl mx-auto">
+      <section id="home" className="container px-4 pt-10 pb-16 text-center max-w-3xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="font-display text-4xl sm:text-5xl text-foreground leading-tight">
             Construction Site Management Software, <span className="text-primary">Built for Kenya</span>
@@ -193,6 +267,25 @@ export default function Landing() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section id="about" className="py-14">
+        <div className="container px-4 max-w-3xl mx-auto text-center">
+          <h2 className="font-display text-2xl text-foreground">About Mutiso.AI</h2>
+          <p className="mt-4 text-muted-foreground leading-relaxed">
+            Mutiso.AI is built by Jenga Technologies for contractors and foremen running real construction sites
+            across Kenya — not a generic global tool retrofitted for the local market. We built it because too many
+            sites are still run on paper notebooks and scattered WhatsApp groups, where a missed message can mean a
+            missed safety incident, a payroll dispute, or a material shortage nobody saw coming.
+          </p>
+          <p className="mt-4 text-muted-foreground leading-relaxed">
+            Every workflow in Mutiso.AI — from attendance to incident reporting to payroll — is designed around how
+            Kenyan sites actually operate: KES pricing, M-Pesa billing, and safety processes built around OSHA 2007,
+            WIBA 2007, DOSHS, NCA, and Energy Act 2019. Our goal is simple: give contractors real visibility into
+            every site they run, and give foremen a tool that works even when the signal doesn't.
+          </p>
         </div>
       </section>
 
@@ -300,6 +393,38 @@ export default function Landing() {
                 <p className="text-sm text-muted-foreground mt-1">{f.a}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="bg-secondary/30 py-14">
+        <div className="container px-4 max-w-2xl mx-auto text-center">
+          <h2 className="font-display text-2xl text-foreground">How to reach us</h2>
+          <p className="mt-3 text-muted-foreground">
+            Questions before you sign up, or need help with your site? Reach us directly.
+          </p>
+          <div className="mt-8 grid sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card-industrial p-5 flex flex-col items-center gap-2 hover:border-primary transition-colors"
+            >
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-primary" />
+              </div>
+              <p className="font-medium text-foreground">WhatsApp</p>
+              <p className="text-sm text-muted-foreground">0700 920 985</p>
+            </a>
+            <a href={`mailto:${CONTACT_EMAIL}`}
+              className="card-industrial p-5 flex flex-col items-center gap-2 hover:border-primary transition-colors"
+            >
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+                <Mail className="w-5 h-5 text-primary" />
+              </div>
+              <p className="font-medium text-foreground">Email</p>
+              <p className="text-sm text-muted-foreground break-all">{CONTACT_EMAIL}</p>
+            </a>
           </div>
         </div>
       </section>
