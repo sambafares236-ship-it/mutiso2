@@ -8,9 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   useSiteVariationOrders,
   useRaiseVariationOrder,
-  useDecideVariationOrder,
+  useReviewVariationOrder,
   useVariationOrderResponses,
   useAddVariationOrderResponse,
+  type VariationOrder,
 } from '@/hooks/useVariationOrders';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,14 +19,30 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const schema = z.object({
+// Raise form: title + description only. Whoever spots the issue on site
+// (typically the foreman) reports what happened - pricing it and deciding
+// cost/time impact is the contractor's call at review time, not the
+// raiser's, so those fields don't belong here.
+const raiseSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  cost_impact: z.coerce.number().optional(),
-  time_impact_days: z.coerce.number().optional(),
 });
-type FormInput = z.input<typeof schema>;
-type FormValues = z.output<typeof schema>;
+type RaiseFormValues = z.infer<typeof raiseSchema>;
+
+// Review form (contractor only): can refine the title/description the
+// foreman wrote and must set cost/time impact before approving or
+// rejecting - blank number inputs submit "" which z.coerce.number()
+// alone would turn into 0, so blank stays optional/undefined instead of
+// silently zeroing a real value out.
+const blankToUndefined = (v: unknown) => (v === '' || v === undefined ? undefined : v);
+const reviewSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  cost_impact: z.preprocess(blankToUndefined, z.coerce.number().optional()),
+  time_impact_days: z.preprocess(blankToUndefined, z.coerce.number().optional()),
+});
+type ReviewFormInput = z.input<typeof reviewSchema>;
+type ReviewFormValues = z.output<typeof reviewSchema>;
 
 interface VariationOrdersViewProps {
   siteId: string;
@@ -76,9 +93,9 @@ function RaiseVOForm({ siteId, onClose }: { siteId: string; onClose: () => void 
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormInput, unknown, FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<RaiseFormValues>({ resolver: zodResolver(raiseSchema) });
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: RaiseFormValues) => {
     try {
       await raise.mutateAsync({ site_id: siteId, ...values });
       toast.success('Variation order raised');
@@ -105,19 +122,12 @@ function RaiseVOForm({ siteId, onClose }: { siteId: string; onClose: () => void 
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
-            <Textarea id="description" rows={4} {...register('description')} />
+            <Textarea id="description" rows={4} placeholder="What happened, and why it's outside the original scope..." {...register('description')} />
             {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cost_impact">Cost Impact (KES)</Label>
-              <Input id="cost_impact" type="number" {...register('cost_impact')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time_impact_days">Time Impact (days)</Label>
-              <Input id="time_impact_days" type="number" {...register('time_impact_days')} />
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            The contractor will add cost and time impact when they review this.
+          </p>
           <Button type="submit" variant="construction" size="touch" className="w-full" disabled={isSubmitting}>
             RAISE VARIATION ORDER
           </Button>
@@ -127,21 +137,88 @@ function RaiseVOForm({ siteId, onClose }: { siteId: string; onClose: () => void 
   );
 }
 
-export function VariationOrdersView({ siteId, onClose }: VariationOrdersViewProps) {
-  const { isContractor } = useAuth();
-  const { data: vos, isLoading } = useSiteVariationOrders(siteId);
-  const decide = useDecideVariationOrder();
-  const [showRaiseForm, setShowRaiseForm] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+// Contractor-only: edit the raised title/description, set cost/time
+// impact, and approve or reject - one form, one save. Two submit buttons
+// share the same validation; which one was clicked decides approve vs
+// reject before calling the same mutation.
+function ReviewVOForm({ vo, onDone }: { vo: VariationOrder; onDone: () => void }) {
+  const review = useReviewVariationOrder();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ReviewFormInput, unknown, ReviewFormValues>({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: {
+      title: vo.title,
+      description: vo.description,
+      cost_impact: vo.cost_impact ?? undefined,
+      time_impact_days: vo.time_impact_days ?? undefined,
+    },
+  });
 
-  const handleDecide = async (voId: string, approve: boolean) => {
+  const submitDecision = async (values: ReviewFormValues, approve: boolean) => {
     try {
-      await decide.mutateAsync({ voId, approve });
+      await review.mutateAsync({ voId: vo.id, approve, ...values });
       toast.success(approve ? 'Variation approved' : 'Variation rejected');
+      onDone();
     } catch (err) {
       toast.error('Error', { description: err instanceof Error ? err.message : undefined });
     }
   };
+
+  return (
+    <form className="mt-3 space-y-3 border-t border-border pt-3" noValidate>
+      <div className="space-y-1">
+        <Label htmlFor={`title-${vo.id}`} className="text-xs">Title</Label>
+        <Input id={`title-${vo.id}`} {...register('title')} />
+        {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`description-${vo.id}`} className="text-xs">Description</Label>
+        <Textarea id={`description-${vo.id}`} rows={3} {...register('description')} />
+        {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor={`cost-${vo.id}`} className="text-xs">Cost Impact (KES)</Label>
+          <Input id={`cost-${vo.id}`} type="number" step="0.01" {...register('cost_impact')} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`time-${vo.id}`} className="text-xs">Time Impact (days)</Label>
+          <Input id={`time-${vo.id}`} type="number" {...register('time_impact_days')} />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="construction"
+          disabled={review.isPending}
+          onClick={handleSubmit((values) => submitDecision(values, true))}
+        >
+          <Check className="w-4 h-4 mr-1" /> Approve
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={review.isPending}
+          onClick={handleSubmit((values) => submitDecision(values, false))}
+        >
+          <XCircle className="w-4 h-4 mr-1" /> Reject
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function VariationOrdersView({ siteId, onClose }: VariationOrdersViewProps) {
+  const { isContractor } = useAuth();
+  const { data: vos, isLoading } = useSiteVariationOrders(siteId);
+  const [showRaiseForm, setShowRaiseForm] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in">
@@ -184,14 +261,13 @@ export function VariationOrdersView({ siteId, onClose }: VariationOrdersViewProp
                 )}
 
                 {vo.status === 'open' && isContractor && (
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="construction" onClick={() => handleDecide(vo.id, true)} disabled={decide.isPending}>
-                      <Check className="w-4 h-4 mr-1" /> Approve
+                  reviewingId === vo.id ? (
+                    <ReviewVOForm vo={vo} onDone={() => setReviewingId(null)} />
+                  ) : (
+                    <Button size="sm" variant="construction" className="mt-3" onClick={() => setReviewingId(vo.id)}>
+                      Review & Decide
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDecide(vo.id, false)} disabled={decide.isPending}>
-                      <XCircle className="w-4 h-4 mr-1" /> Reject
-                    </Button>
-                  </div>
+                  )
                 )}
 
                 <button onClick={() => setExpandedId(expandedId === vo.id ? null : vo.id)} className="text-xs text-primary mt-2">

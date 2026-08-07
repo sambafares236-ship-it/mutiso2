@@ -39,19 +39,44 @@ export function useRaiseVariationOrder() {
   });
 }
 
-// Owner-only, enforced by RLS ("Only site owner can decide variation
-// orders" - see the migration). A foreman calling this on a site they
-// don't own gets zero rows updated, not an error.
-export function useDecideVariationOrder() {
+// Contractor-only review action: lets the site owner correct/refine the
+// title, description, and add cost/time impact (fields the foreman who
+// raised it doesn't set) as part of approving or rejecting - one save
+// instead of a separate "edit" step before deciding. Same RLS as before
+// ("Only site owner can decide..." covers the
+// whole row via UPDATE, not just status), so a non-owner caller gets
+// zero rows updated, not an error.
+export function useReviewVariationOrder() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ voId, approve }: { voId: string; approve: boolean }) => {
+    mutationFn: async ({
+      voId,
+      approve,
+      title,
+      description,
+      cost_impact,
+      time_impact_days,
+    }: {
+      voId: string;
+      approve: boolean;
+      title: string;
+      description: string;
+      cost_impact?: number;
+      time_impact_days?: number;
+    }) => {
       if (!user) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('variation_order')
-        .update({ status: approve ? 'approved' : 'rejected', decided_by: user.id })
+        .update({
+          title,
+          description,
+          cost_impact: cost_impact ?? null,
+          time_impact_days: time_impact_days ?? null,
+          status: approve ? 'approved' : 'rejected',
+          decided_by: user.id,
+        })
         .eq('id', voId)
         .select();
       if (error) throw error;

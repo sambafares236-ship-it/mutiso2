@@ -22,6 +22,7 @@ import {
   Banknote,
   Wallet,
   Package,
+  FileEdit,
 } from 'lucide-react';
 import { useForemanSite } from '@/hooks/useSite';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
@@ -48,6 +49,7 @@ import { PayrollView } from '@/components/forms/PayrollView';
 import { PettyCashForm } from '@/components/forms/PettyCashForm';
 import { HeavyEquipmentView } from '@/components/forms/HeavyEquipmentView';
 import { InventoryView } from '@/components/forms/InventoryView';
+import { VariationOrdersView } from '@/components/forms/VariationOrdersView';
 
 type FormType =
   | 'attendance'
@@ -66,6 +68,7 @@ type FormType =
   | 'environmental'
   | 'payroll'
   | 'pettyCash'
+  | 'variations'
   | 'heavyEquipment'
   | 'inventory'
   | null;
@@ -109,6 +112,7 @@ const QUALITY_TILES: TileConfig[] = [
   { key: 'defects', icon: Wrench, label: 'Defects', subtitle: 'Report & track', color: 'text-warning', bg: 'bg-warning/15' },
   { key: 'report', icon: History, label: 'Site History', subtitle: 'View history', color: 'text-blue-400', bg: 'bg-blue-400/15' },
   { key: 'permit', icon: FileCheck, label: 'Permits', subtitle: 'Request & track', color: 'text-orange-400', bg: 'bg-orange-400/15' },
+  { key: 'variations', icon: FileEdit, label: 'Variations', subtitle: 'Raise an issue', color: 'text-pink-400', bg: 'bg-pink-400/15' },
 ];
 
 const ASSET_TILES: TileConfig[] = [
@@ -380,6 +384,7 @@ export default function ForemanDashboard() {
       {activeForm === 'environmental' && <EnvironmentalView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'payroll' && <PayrollView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'pettyCash' && <PettyCashForm siteId={site.id} onClose={() => setActiveForm(null)} />}
+      {activeForm === 'variations' && <VariationOrdersView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'heavyEquipment' && <HeavyEquipmentView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'inventory' && <InventoryView siteId={site.id} onClose={() => setActiveForm(null)} />}
     </div>
