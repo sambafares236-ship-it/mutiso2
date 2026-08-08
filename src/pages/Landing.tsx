@@ -64,7 +64,7 @@ const FEATURES = [
 
 const FAQS = [
   {
-    q: 'Is Mutiso.AI built for the Kenyan construction market specifically?',
+    q: 'Is JengaOps built for the Kenyan construction market specifically?',
     a: 'Yes — pricing is in KES, and the safety/compliance workflows are built around OSHA 2007, WIBA 2007, DOSHS, NCA, and Energy Act 2019 references.',
   },
   {
@@ -73,7 +73,7 @@ const FAQS = [
   },
   {
     q: 'Do I need a smartphone app or special hardware?',
-    a: 'No — Mutiso.AI runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
+    a: 'No — JengaOps runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
   },
   {
     q: 'How does the WhatsApp bot work?',
@@ -115,7 +115,7 @@ export default function Landing() {
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        name: 'Mutiso.AI',
+        name: 'JengaOps',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         description:
@@ -163,12 +163,12 @@ export default function Landing() {
           <button
             onClick={() => scrollToId('home')}
             className="flex items-center gap-2"
-            aria-label="Mutiso.AI home"
+            aria-label="JengaOps home"
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <HardHat className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display text-lg text-primary">MUTISO.AI</span>
+            <span className="font-display text-lg text-primary">JENGAOPS</span>
           </button>
 
           {/* Desktop nav links */}
@@ -273,15 +273,15 @@ export default function Landing() {
       {/* About */}
       <section id="about" className="py-14">
         <div className="container px-4 max-w-3xl mx-auto text-center">
-          <h2 className="font-display text-2xl text-foreground">About Mutiso.AI</h2>
+          <h2 className="font-display text-2xl text-foreground">About JengaOps</h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Mutiso.AI is built by Jenga Technologies for contractors and foremen running real construction sites
+            JengaOps is built by Jenga Technologies for contractors and foremen running real construction sites
             across Kenya — not a generic global tool retrofitted for the local market. We built it because too many
             sites are still run on paper notebooks and scattered WhatsApp groups, where a missed message can mean a
             missed safety incident, a payroll dispute, or a material shortage nobody saw coming.
           </p>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Every workflow in Mutiso.AI — from attendance to incident reporting to payroll — is designed around how
+            Every workflow in JengaOps — from attendance to incident reporting to payroll — is designed around how
             Kenyan sites actually operate: KES pricing, M-Pesa billing, and safety processes built around OSHA 2007,
             WIBA 2007, DOSHS, NCA, and Energy Act 2019. Our goal is simple: give contractors real visibility into
             every site they run, and give foremen a tool that works even when the signal doesn't.
@@ -315,7 +315,7 @@ export default function Landing() {
           </div>
           <h2 className="font-display text-2xl text-foreground">Ask your site status, right from WhatsApp</h2>
           <p className="mt-3 text-muted-foreground">
-            No app to open, no dashboard to check. Message the Mutiso.AI bot and ask "how's Westlands Tower A doing
+            No app to open, no dashboard to check. Message the JengaOps bot and ask "how's Westlands Tower A doing
             this week?" — get a real answer pulled from live attendance, deliveries, incidents, and budget data.
             Serious incidents also push straight to your phone the moment they're logged, on every plan.
           </p>
@@ -432,7 +432,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} Mutiso.AI</span>
+          <span>© {new Date().getFullYear()} JengaOps</span>
           <div className="flex gap-4">
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>

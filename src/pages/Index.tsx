@@ -760,7 +760,7 @@ export default function Index() {
     <div className="min-h-screen bg-background pb-8">
       <div className="caution-stripe w-full" />
       <header className="container flex items-center justify-between h-16 px-4">
-        <h1 className="font-display text-xl text-primary">MUTISO.AI</h1>
+        <h1 className="font-display text-xl text-primary">JENGAOPS</h1>
         <div className="flex items-center gap-3">
           <RoleBadge />
           <Button

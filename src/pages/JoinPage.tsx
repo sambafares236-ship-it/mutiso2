@@ -61,7 +61,7 @@ export default function JoinPage() {
       // would render off the stale, still-empty role list.
       await refreshRoles();
 
-      toast.success('Welcome to Mutiso.AI!', {
+      toast.success('Welcome to JengaOps!', {
         description: `You have been assigned to ${invite.site?.site_name ?? 'your site'}.`,
       });
       navigate('/app', { replace: true });
@@ -107,7 +107,7 @@ export default function JoinPage() {
           <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <HardHat className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-4xl text-primary">MUTISO.AI</h1>
+          <h1 className="font-display text-4xl text-primary">JENGAOPS</h1>
           <p className="text-muted-foreground mt-1">You've been invited</p>
         </div>
 

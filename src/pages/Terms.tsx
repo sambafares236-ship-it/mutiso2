@@ -23,14 +23,14 @@ export default function Terms() {
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
             <HardHat className="w-5 h-5 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-2xl text-primary">MUTISO.AI — Terms of Service</h1>
+          <h1 className="font-display text-2xl text-primary">JENGAOPS — Terms of Service</h1>
         </div>
 
         <div className="card-industrial p-5 space-y-5 text-sm text-foreground leading-relaxed">
           <section>
             <h2 className="font-display text-lg text-foreground mb-1">1. Who this agreement is between</h2>
             <p>
-              These Terms govern use of the Mutiso.AI construction-site management application ("the Service"),
+              These Terms govern use of the JengaOps construction-site management application ("the Service"),
               provided by Jenga Technologies, a company registered in Kenya at Nairobi ("we", "us"). By
               creating an account you agree to these Terms.
             </p>
@@ -39,7 +39,7 @@ export default function Terms() {
           <section>
             <h2 className="font-display text-lg text-foreground mb-1">2. What the Service does</h2>
             <p>
-              Mutiso.AI helps contractors and their teams manage construction sites: attendance, materials, safety
+              JengaOps helps contractors and their teams manage construction sites: attendance, materials, safety
               and compliance records, quality/progress tracking, financial administration, asset tracking, and
               related reporting, including automated WhatsApp/email alerts and a conversational site-status bot.
             </p>

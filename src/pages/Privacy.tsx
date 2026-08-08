@@ -23,7 +23,7 @@ export default function Privacy() {
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
             <HardHat className="w-5 h-5 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-2xl text-primary">MUTISO.AI — Privacy Policy</h1>
+          <h1 className="font-display text-2xl text-primary">JENGAOPS — Privacy Policy</h1>
         </div>
 
         <div className="card-industrial p-5 space-y-5 text-sm text-foreground leading-relaxed">
@@ -31,7 +31,7 @@ export default function Privacy() {
             <h2 className="font-display text-lg text-foreground mb-1">1. Data controller</h2>
             <p>
               Jenga Technologies, registered in Nairobi, Kenya, is the data controller for personal data processed
-              through Mutiso.AI. Contact for data protection queries: mutisoconstruction@gmail.com.
+              through JengaOps. Contact for data protection queries: mutisoconstruction@gmail.com.
             </p>
           </section>
 

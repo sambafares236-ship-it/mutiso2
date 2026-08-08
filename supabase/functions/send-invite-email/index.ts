@@ -13,7 +13,7 @@
 // via manual link sharing in the meantime.
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Mutiso.AI <onboarding@resend.dev>';
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'JengaOps <onboarding@resend.dev>';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #1a1a1a;">You've been invited to Mutiso.AI</h2>
+      <h2 style="color: #1a1a1a;">You've been invited to JengaOps</h2>
       <p>You've been invited to join <strong>${site_name}</strong> as a foreman.</p>
       <p>
         <a href="${join_url}" style="display: inline-block; background: #f5c518; color: #1a1a1a; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;">
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: RESEND_FROM_EMAIL,
       to: [to],
-      subject: `You're invited to ${site_name} on Mutiso.AI`,
+      subject: `You're invited to ${site_name} on JengaOps`,
       html,
     }),
   });

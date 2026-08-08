@@ -89,7 +89,7 @@ export function useUpdateProfile() {
         // means nothing to a contractor, so translate it here.
         if (error.code === '23505' && error.message?.includes('profiles_normalized_phone_unique')) {
           throw new Error(
-            'That phone number is already registered to another Mutiso.AI account. Use a different number, or sign in to the account that already uses it.',
+            'That phone number is already registered to another JengaOps account. Use a different number, or sign in to the account that already uses it.',
           );
         }
         throw error;

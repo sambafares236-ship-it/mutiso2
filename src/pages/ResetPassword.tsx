@@ -57,7 +57,7 @@ export default function ResetPassword() {
           <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <HardHat className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-4xl text-primary">MUTISO.AI</h1>
+          <h1 className="font-display text-4xl text-primary">JENGAOPS</h1>
           <p className="text-muted-foreground mt-1">Set a new password</p>
         </div>
 

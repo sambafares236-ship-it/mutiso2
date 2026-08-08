@@ -253,7 +253,7 @@ function CategorySidebar({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-[85vw] max-w-xs p-0 flex flex-col">
         <SheetHeader className="p-4 border-b border-border text-left">
-          <SheetTitle className="font-display text-2xl text-primary tracking-wide">MUTISO.AI</SheetTitle>
+          <SheetTitle className="font-display text-2xl text-primary tracking-wide">JENGAOPS</SheetTitle>
         </SheetHeader>
         <nav className="flex-1 overflow-y-auto p-2">
           {categories.map((category) => {
