@@ -1740,6 +1740,8 @@ export type Database = {
           created_at: string
           id: string
           insurance_expiry: string | null
+          nca_class: string | null
+          nca_expiry: string | null
           nca_number: string | null
           site_id: string
           trade: string | null
@@ -1751,6 +1753,8 @@ export type Database = {
           created_at?: string
           id?: string
           insurance_expiry?: string | null
+          nca_class?: string | null
+          nca_expiry?: string | null
           nca_number?: string | null
           site_id: string
           trade?: string | null
@@ -1762,6 +1766,8 @@ export type Database = {
           created_at?: string
           id?: string
           insurance_expiry?: string | null
+          nca_class?: string | null
+          nca_expiry?: string | null
           nca_number?: string | null
           site_id?: string
           trade?: string | null
@@ -1792,6 +1798,7 @@ export type Database = {
           site_id: string
           status: string
           subcontractor_id: string
+          value: number | null
         }
         Insert: {
           created_at?: string
@@ -1801,6 +1808,7 @@ export type Database = {
           site_id: string
           status?: string
           subcontractor_id: string
+          value?: number | null
         }
         Update: {
           created_at?: string
@@ -1810,6 +1818,7 @@ export type Database = {
           site_id?: string
           status?: string
           subcontractor_id?: string
+          value?: number | null
         }
         Relationships: [
           {
@@ -1831,6 +1840,102 @@ export type Database = {
             columns: ["subcontractor_id"]
             isOneToOne: false
             referencedRelation: "subcontractor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcontractor_payment: {
+        Row: {
+          actual_cost_id: string | null
+          certified_at: string | null
+          certified_by: string | null
+          created_at: string
+          created_by: string
+          id: string
+          net_amount_due: number
+          payment_number: number
+          previous_payments_total: number
+          retention_amount: number
+          retention_percentage: number
+          site_id: string
+          status: string
+          subcontractor_id: string
+          withholding_tax_flag: boolean
+          work_completed_value: number
+          work_order_id: string | null
+        }
+        Insert: {
+          actual_cost_id?: string | null
+          certified_at?: string | null
+          certified_by?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          net_amount_due: number
+          payment_number: number
+          previous_payments_total?: number
+          retention_amount: number
+          retention_percentage?: number
+          site_id: string
+          status?: string
+          subcontractor_id: string
+          withholding_tax_flag?: boolean
+          work_completed_value: number
+          work_order_id?: string | null
+        }
+        Update: {
+          actual_cost_id?: string | null
+          certified_at?: string | null
+          certified_by?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          net_amount_due?: number
+          payment_number?: number
+          previous_payments_total?: number
+          retention_amount?: number
+          retention_percentage?: number
+          site_id?: string
+          status?: string
+          subcontractor_id?: string
+          withholding_tax_flag?: boolean
+          work_completed_value?: number
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcontractor_payment_actual_cost_id_fkey"
+            columns: ["actual_cost_id"]
+            isOneToOne: false
+            referencedRelation: "actual_cost"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_payment_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_payment_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
+          {
+            foreignKeyName: "subcontractor_payment_subcontractor_id_fkey"
+            columns: ["subcontractor_id"]
+            isOneToOne: false
+            referencedRelation: "subcontractor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_payment_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "subcontractor_work_order"
             referencedColumns: ["id"]
           },
         ]
@@ -1976,9 +2081,11 @@ export type Database = {
         Row: {
           category: string
           condition_notes: string | null
+          cost_per_hour: number | null
           created_at: string
           current_holder_name: string | null
           id: string
+          is_active: boolean
           meter_unit: string | null
           site_id: string
           status: string
@@ -1988,9 +2095,11 @@ export type Database = {
         Insert: {
           category?: string
           condition_notes?: string | null
+          cost_per_hour?: number | null
           created_at?: string
           current_holder_name?: string | null
           id?: string
+          is_active?: boolean
           meter_unit?: string | null
           site_id: string
           status?: string
@@ -2000,9 +2109,11 @@ export type Database = {
         Update: {
           category?: string
           condition_notes?: string | null
+          cost_per_hour?: number | null
           created_at?: string
           current_holder_name?: string | null
           id?: string
+          is_active?: boolean
           meter_unit?: string | null
           site_id?: string
           status?: string
@@ -2023,6 +2134,102 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscription_reminder_queue"
             referencedColumns: ["site_id"]
+          },
+        ]
+      }
+      tool_usage_event: {
+        Row: {
+          event_at: string
+          event_type: string
+          id: string
+          logged_by: string
+          meter_reading: number | null
+          session_id: string
+        }
+        Insert: {
+          event_at?: string
+          event_type: string
+          id?: string
+          logged_by: string
+          meter_reading?: number | null
+          session_id: string
+        }
+        Update: {
+          event_at?: string
+          event_type?: string
+          id?: string
+          logged_by?: string
+          meter_reading?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_usage_event_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "tool_usage_session"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tool_usage_session: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          operator_name: string | null
+          session_date: string
+          site_id: string
+          started_at: string
+          started_by: string
+          status: string
+          tool_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          operator_name?: string | null
+          session_date?: string
+          site_id: string
+          started_at?: string
+          started_by: string
+          status?: string
+          tool_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          operator_name?: string | null
+          session_date?: string
+          site_id?: string
+          started_at?: string
+          started_by?: string
+          status?: string
+          tool_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_usage_session_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_usage_session_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
+          {
+            foreignKeyName: "tool_usage_session_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tool_inventory"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2451,6 +2658,37 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_inventory_foreman: {
+        Row: {
+          category: string | null
+          condition_notes: string | null
+          created_at: string | null
+          current_holder_name: string | null
+          id: string | null
+          is_active: boolean | null
+          meter_unit: string | null
+          site_id: string | null
+          status: string | null
+          tool_id_number: string | null
+          tool_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_inventory_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_inventory_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_reminder_queue"
+            referencedColumns: ["site_id"]
+          },
+        ]
+      }
     }
     Functions: {
       _extend_site_subscription: {
@@ -2543,6 +2781,20 @@ export type Database = {
         Args: { p_site_id: string; p_week_end: string; p_week_start: string }
         Returns: string
       }
+      generate_subcontractor_payment: {
+        Args: {
+          p_retention_percentage?: number
+          p_site_id: string
+          p_subcontractor_id: string
+          p_work_completed_value: number
+          p_work_order_id?: string
+        }
+        Returns: string
+      }
+      subcontractor_is_compliant: {
+        Args: { p_subcontractor_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2611,6 +2863,10 @@ export type Database = {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
+      pause_usage_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
       recompute_milestone_auto_status: {
         Args: { p_milestone_id: string }
         Returns: undefined
@@ -2626,6 +2882,10 @@ export type Database = {
           p_site_id: string
         }
         Returns: string
+      }
+      resume_usage_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
       }
       return_tool: {
         Args: {
@@ -2643,6 +2903,18 @@ export type Database = {
       start_trial_site: {
         Args: { p_location?: string; p_site_name: string }
         Returns: string
+      }
+      start_usage_session: {
+        Args: {
+          p_meter_reading?: number
+          p_operator_name?: string
+          p_tool_id: string
+        }
+        Returns: string
+      }
+      stop_usage_session: {
+        Args: { p_meter_reading?: number; p_session_id: string }
+        Returns: undefined
       }
       verify_defect: { Args: { p_defect_id: string }; Returns: undefined }
     }
