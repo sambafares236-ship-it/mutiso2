@@ -246,8 +246,8 @@ export function useStartUsageSession() {
     }) => {
       const { data, error } = await supabase.rpc('start_usage_session', {
         p_tool_id: toolId,
-        p_operator_name: operatorName ?? null,
-        p_meter_reading: meterReading ?? null,
+        p_operator_name: operatorName ?? undefined,
+        p_meter_reading: meterReading ?? undefined,
       });
       if (error) throw error;
       return data;
@@ -284,7 +284,7 @@ export function useStopUsageSession() {
     mutationFn: async ({ sessionId, meterReading }: { sessionId: string; toolId: string; meterReading?: number }) => {
       const { error } = await supabase.rpc('stop_usage_session', {
         p_session_id: sessionId,
-        p_meter_reading: meterReading ?? null,
+        p_meter_reading: meterReading ?? undefined,
       });
       if (error) throw error;
     },
@@ -297,7 +297,10 @@ export function useStopUsageSession() {
 // "compute, don't store" convention useEquipmentEfficiency already uses) -
 // a lunch pause simply never contributes an interval, rather than being
 // subtracted after the fact.
-export function activeSecondsFromEvents(events: UsageEvent[], now: number = Date.now()): number {
+export function activeSecondsFromEvents(
+  events: Pick<UsageEvent, 'event_type' | 'event_at'>[],
+  now: number = Date.now(),
+): number {
   let total = 0;
   let openStart: number | null = null;
   for (const e of events) {
@@ -413,6 +416,13 @@ export function useEquipmentEfficiency(siteId: string | undefined) {
       const result: Record<string, EquipmentEfficiency> = {};
 
       for (const tool of toolsRes.data ?? []) {
+        // tool.id is nullable in the generated type because it comes through
+        // tool_inventory_foreman for a foreman session (view columns are
+        // typed nullable by the generator) - it's never actually null in
+        // practice since it's a passthrough of tool_inventory's real PK, but
+        // we guard here rather than assert, so a genuinely malformed row is
+        // skipped instead of corrupting the result map.
+        if (!tool.id) continue;
         const toolSessions = (sessionsRes.data ?? []).filter((s) => s.tool_id === tool.id);
         let hoursAllTime = 0;
         let hoursLast30 = 0;
@@ -422,7 +432,7 @@ export function useEquipmentEfficiency(siteId: string | undefined) {
           const sessionEvents = (eventsRes.data ?? [])
             .filter((e) => e.session_id === session.id)
             .sort((a, b) => new Date(a.event_at).getTime() - new Date(b.event_at).getTime());
-          const activeSeconds = activeSecondsFromEvents(sessionEvents as UsageEvent[], now);
+          const activeSeconds = activeSecondsFromEvents(sessionEvents, now);
           const activeHours = activeSeconds / 3600;
           hoursAllTime += activeHours;
           if (new Date(session.started_at).getTime() >= windowStart) hoursLast30 += activeHours;

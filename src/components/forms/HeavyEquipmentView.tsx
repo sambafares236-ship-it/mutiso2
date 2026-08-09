@@ -245,11 +245,11 @@ function LiveDuration({ events }: { events: { event_type: string; event_at: stri
     const id = setInterval(() => forceTick((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, []);
-  const seconds = activeSecondsFromEvents(events as never);
+  const seconds = activeSecondsFromEvents(events);
   return <span>{formatHours(seconds / 3600)}</span>;
 }
 
-function UsageControls({ siteId, tool, meterUnit }: { siteId: string; tool: Tool | ForemanTool; meterUnit: string | null }) {
+function UsageControls({ tool, meterUnit }: { tool: Tool | ForemanTool; meterUnit: string | null }) {
   const { data: active, isLoading } = useActiveUsageSession(tool.id);
   const start = useStartUsageSession();
   const pause = usePauseUsageSession();
@@ -611,7 +611,7 @@ export function HeavyEquipmentView({ siteId, onClose }: HeavyEquipmentViewProps)
                   )}
 
                   {!isContractor && tool.is_active && tool.status !== 'maintenance' && tool.status !== 'lost' && (
-                    <UsageControls siteId={siteId} tool={tool} meterUnit={tool.meter_unit} />
+                    <UsageControls tool={tool} meterUnit={tool.meter_unit} />
                   )}
                   {!isContractor && !tool.is_active && (
                     <p className="text-xs text-muted-foreground mt-2">Not yet active on site - check with your contractor.</p>
