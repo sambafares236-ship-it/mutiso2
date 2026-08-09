@@ -64,7 +64,7 @@ const FEATURES = [
 
 const FAQS = [
   {
-    q: 'Is JengaOps built for the Kenyan construction market specifically?',
+    q: 'Is Mutiso.AI built for the Kenyan construction market specifically?',
     a: 'Yes — pricing is in KES, and the safety/compliance workflows are built around OSHA 2007, WIBA 2007, DOSHS, NCA, and Energy Act 2019 references.',
   },
   {
@@ -73,11 +73,7 @@ const FAQS = [
   },
   {
     q: 'Do I need a smartphone app or special hardware?',
-    a: 'No — JengaOps runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
-  },
-  {
-    q: 'How does the WhatsApp bot work?',
-    a: "Once enabled, a contractor can message the bot directly on WhatsApp and ask things like \"how's Site A doing\" to get a real answer pulled from live attendance, materials, incident, and budget data — no need to open the app.",
+    a: 'No — Mutiso.AI runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
   },
   {
     q: 'How do I pay?',
@@ -115,11 +111,11 @@ export default function Landing() {
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        name: 'JengaOps',
+        name: 'Mutiso.AI',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         description:
-          'Construction site management software for Kenyan contractors — attendance, safety compliance, materials, payroll, and a WhatsApp site-status assistant.',
+          'Construction site management software for Kenyan contractors — attendance, safety compliance, materials, and payroll.',
         url: currentOrigin(),
         offers: [
           {
@@ -163,12 +159,12 @@ export default function Landing() {
           <button
             onClick={() => scrollToId('home')}
             className="flex items-center gap-2"
-            aria-label="JengaOps home"
+            aria-label="Mutiso.AI home"
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <HardHat className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display text-lg text-primary">JENGAOPS</span>
+            <span className="font-display text-lg text-primary">MUTISO.AI</span>
           </button>
 
           {/* Desktop nav links */}
@@ -228,8 +224,7 @@ export default function Landing() {
             Construction Site Management Software, <span className="text-primary">Built for Kenya</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Attendance, safety compliance, materials, payroll, and progress tracking for your construction sites —
-            plus a WhatsApp assistant that answers "how's my site doing" in real time.
+            Attendance, safety compliance, materials, payroll, and progress tracking for your construction sites.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="construction" size="xl" onClick={() => navigate('/auth')}>
@@ -273,15 +268,15 @@ export default function Landing() {
       {/* About */}
       <section id="about" className="py-14">
         <div className="container px-4 max-w-3xl mx-auto text-center">
-          <h2 className="font-display text-2xl text-foreground">About JengaOps</h2>
+          <h2 className="font-display text-2xl text-foreground">About Mutiso.AI</h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            JengaOps is built by Jenga Technologies for contractors and foremen running real construction sites
+            Mutiso.AI is built by Jenga Technologies for contractors and foremen running real construction sites
             across Kenya — not a generic global tool retrofitted for the local market. We built it because too many
             sites are still run on paper notebooks and scattered WhatsApp groups, where a missed message can mean a
             missed safety incident, a payroll dispute, or a material shortage nobody saw coming.
           </p>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Every workflow in JengaOps — from attendance to incident reporting to payroll — is designed around how
+            Every workflow in Mutiso.AI — from attendance to incident reporting to payroll — is designed around how
             Kenyan sites actually operate: KES pricing, M-Pesa billing, and safety processes built around OSHA 2007,
             WIBA 2007, DOSHS, NCA, and Energy Act 2019. Our goal is simple: give contractors real visibility into
             every site they run, and give foremen a tool that works even when the signal doesn't.
@@ -307,21 +302,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* WhatsApp bot spotlight */}
-      <section className="bg-secondary/30 py-14">
-        <div className="container px-4 max-w-3xl mx-auto text-center">
-          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <MessageCircle className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <h2 className="font-display text-2xl text-foreground">Ask your site status, right from WhatsApp</h2>
-          <p className="mt-3 text-muted-foreground">
-            No app to open, no dashboard to check. Message the JengaOps bot and ask "how's Westlands Tower A doing
-            this week?" — get a real answer pulled from live attendance, deliveries, incidents, and budget data.
-            Serious incidents also push straight to your phone the moment they're logged, on every plan.
-          </p>
-        </div>
-      </section>
-
       {/* Pricing */}
       <section id="pricing" className="py-14">
         <div className="container px-4 max-w-4xl mx-auto">
@@ -341,9 +321,6 @@ export default function Landing() {
                 <li>Tool checkout &amp; return log</li>
                 <li>Real-time severe-incident WhatsApp/email alerts</li>
               </ul>
-              <p className="mt-4 text-xs text-muted-foreground">
-                + WhatsApp Bot add-on: KES {TIER_PRICING.field_ops.withBot - TIER_PRICING.field_ops.base}/mo
-              </p>
             </div>
             <div className="card-industrial p-6 border-2 border-primary">
               <p className="font-display text-xl text-foreground">Pro</p>
@@ -355,11 +332,8 @@ export default function Landing() {
                 <li>Everything in Field Ops & Safety</li>
                 <li>Defects, milestones, schedule/Gantt, budget, payroll</li>
                 <li>Variation orders, subcontractors, heavy plant</li>
-                <li>Weekly and monthly WhatsApp/email digests</li>
+                <li>Weekly and monthly email digests</li>
               </ul>
-              <p className="mt-4 text-xs text-muted-foreground">
-                + WhatsApp Bot add-on: KES {TIER_PRICING.pro.withBot - TIER_PRICING.pro.base}/mo
-              </p>
             </div>
           </div>
           <div className="mt-8 text-center">
@@ -432,7 +406,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} JengaOps</span>
+          <span>© {new Date().getFullYear()} Mutiso.AI</span>
           <div className="flex gap-4">
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>

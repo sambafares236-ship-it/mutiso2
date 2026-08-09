@@ -10,7 +10,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatKES } from '@/lib/utils';
@@ -33,7 +32,6 @@ interface PaySubscriptionDialogProps {
 
 export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open, onClose }: PaySubscriptionDialogProps) {
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
-  const [includeBot, setIncludeBot] = useState(false);
   const [mpesaCode, setMpesaCode] = useState('');
   const [manualReported, setManualReported] = useState(false);
   const initiatePayment = useInitiateSubscriptionPayment();
@@ -41,14 +39,17 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
   const { data: payment } = useSubscriptionPaymentStatus(checkoutRequestId);
   const invalidateSites = useInvalidateSitesAfterPayment();
 
+  // WhatsApp add-on is temporarily off the market (not sold, not shown) -
+  // hardcoded off rather than removed from the payment payload shape, so
+  // re-enabling it later is just restoring the checkbox UI, not rewiring
+  // the hooks/edge function again.
+  const includeBot = false;
   const pricing = TIER_PRICING[subscriptionTier];
   const amount = includeBot ? pricing.withBot : pricing.base;
-  const botAddonPrice = pricing.withBot - pricing.base;
 
   useEffect(() => {
     if (!open) {
       setCheckoutRequestId(null);
-      setIncludeBot(false);
       setMpesaCode('');
       setManualReported(false);
     }
@@ -100,16 +101,6 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
 
         {PAYMENT_MODE === 'manual' && !manualReported && (
           <div className="space-y-4">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="include_bot"
-                checked={includeBot}
-                onCheckedChange={(checked) => setIncludeBot(checked === true)}
-              />
-              <Label htmlFor="include_bot" className="text-sm font-normal leading-snug">
-                Add the WhatsApp Bot assistant (+{formatKES(botAddonPrice)}/mo)
-              </Label>
-            </div>
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
               <p className="text-sm text-foreground">
                 Send <span className="font-medium">{formatKES(amount)}</span> via M-Pesa (Send Money) to:
@@ -152,16 +143,6 @@ export function PaySubscriptionDialog({ siteId, siteName, subscriptionTier, open
 
         {PAYMENT_MODE === 'stk_push' && !checkoutRequestId && (
           <div className="space-y-4">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="include_bot"
-                checked={includeBot}
-                onCheckedChange={(checked) => setIncludeBot(checked === true)}
-              />
-              <Label htmlFor="include_bot" className="text-sm font-normal leading-snug">
-                Add the WhatsApp Bot assistant (+{formatKES(botAddonPrice)}/mo)
-              </Label>
-            </div>
             <p className="text-sm text-muted-foreground">
               This will send an M-Pesa STK push for <span className="font-medium text-foreground">{formatKES(amount)}</span> to
               the phone number on your profile, extending this site's subscription by one month.

@@ -8,6 +8,13 @@ interface SiteSetupChecklistProps {
   siteName: string;
   /** Gates the Pro-only schedule step - see useSiteSetupProgress. */
   tier: 'field_ops' | 'pro';
+  /**
+   * Renders just the step list, without the outer card, title, or progress bar.
+   * Used when the checklist is the detail of the onboarding tracker's "Set up
+   * your site" phase - that card already supplies the frame and the progress,
+   * so repeating them here would be a card-in-a-card with two progress readouts.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -17,12 +24,12 @@ interface SiteSetupChecklistProps {
  * the first day, not a permanent dashboard fixture, so there's deliberately no
  * dismiss control to manage or persist.
  */
-export function SiteSetupChecklist({ siteId, siteName, tier }: SiteSetupChecklistProps) {
+export function SiteSetupChecklist({ siteId, siteName, tier, embedded = false }: SiteSetupChecklistProps) {
   const { data, isLoading } = useSiteSetupProgress(siteId, tier);
 
   if (isLoading) {
     return (
-      <div className="card-industrial p-4 space-y-3">
+      <div className={embedded ? 'space-y-3' : 'card-industrial p-4 space-y-3'}>
         <Skeleton className="h-5 w-40" />
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-4 w-full" />
@@ -35,6 +42,35 @@ export function SiteSetupChecklist({ siteId, siteName, tier }: SiteSetupChecklis
 
   const { steps, completedCount } = data;
   const total = steps.length;
+
+  const list = (
+    <ul className="space-y-2.5 pt-1">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-start gap-2.5">
+            {step.done ? (
+              <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
+            ) : (
+              <Circle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+            )}
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'text-sm leading-snug',
+                  step.done ? 'text-muted-foreground line-through' : 'text-foreground',
+                )}
+              >
+                {step.label}
+              </p>
+              {!step.done && (
+                <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
+              )}
+            </div>
+          </li>
+        ))}
+    </ul>
+  );
+
+  if (embedded) return list;
 
   return (
     <div className="card-industrial p-4 border-2 border-primary/50 space-y-3">
@@ -66,30 +102,7 @@ export function SiteSetupChecklist({ siteId, siteName, tier }: SiteSetupChecklis
         />
       </div>
 
-      <ul className="space-y-2.5 pt-1">
-        {steps.map((step) => (
-          <li key={step.id} className="flex items-start gap-2.5">
-            {step.done ? (
-              <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
-            ) : (
-              <Circle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-            )}
-            <div className="min-w-0">
-              <p
-                className={cn(
-                  'text-sm leading-snug',
-                  step.done ? 'text-muted-foreground line-through' : 'text-foreground',
-                )}
-              >
-                {step.label}
-              </p>
-              {!step.done && (
-                <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {list}
     </div>
   );
 }

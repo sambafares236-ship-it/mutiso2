@@ -42,8 +42,8 @@ const DARAJA_BASE_URL =
 // Kept in sync manually with src/lib/pricing.ts (a Deno Edge Function can't
 // import from src/lib) - if these prices change, update both places.
 const TIER_PRICING: Record<string, { base: number; withBot: number }> = {
-  field_ops: { base: 2500, withBot: 4000 },
-  pro: { base: 5000, withBot: 7000 },
+  field_ops: { base: 3000, withBot: 4000 },
+  pro: { base: 6000, withBot: 7000 },
 };
 
 const corsHeaders = {
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       PhoneNumber: normalizedPhone,
       CallBackURL: MPESA_CALLBACK_URL,
       AccountReference: site_id,
-      TransactionDesc: 'JengaOps subscription renewal',
+      TransactionDesc: 'Mutiso.AI subscription renewal',
     }),
   });
 

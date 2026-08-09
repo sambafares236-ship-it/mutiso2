@@ -6,8 +6,8 @@
 export type SubscriptionTier = 'field_ops' | 'pro';
 
 export const TIER_PRICING: Record<SubscriptionTier, { base: number; withBot: number }> = {
-  field_ops: { base: 2500, withBot: 4000 },
-  pro: { base: 5000, withBot: 7000 },
+  field_ops: { base: 3000, withBot: 4000 },
+  pro: { base: 6000, withBot: 7000 },
 };
 
 export const TIER_LABEL: Record<SubscriptionTier, string> = {

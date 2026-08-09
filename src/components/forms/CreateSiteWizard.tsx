@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Building, X, Loader2, Send, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Building, X, Loader2, Send, CheckCircle2 } from 'lucide-react';
 import { useCreateSiteWithManualPayment } from '@/hooks/useSubscriptionPayment';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,9 +36,7 @@ interface PlanOption {
 
 const PLANS: PlanOption[] = [
   { id: 'field_ops', tier: 'field_ops', bot: false, price: TIER_PRICING.field_ops.base },
-  { id: 'field_ops_bot', tier: 'field_ops', bot: true, price: TIER_PRICING.field_ops.withBot },
   { id: 'pro', tier: 'pro', bot: false, price: TIER_PRICING.pro.base },
-  { id: 'pro_bot', tier: 'pro', bot: true, price: TIER_PRICING.pro.withBot },
 ];
 
 interface CreateSiteWizardProps {
@@ -164,16 +162,6 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
                       <span className="text-xs text-muted-foreground font-sans">/mo</span>
                     </span>
                   </div>
-                  {p.bot ? (
-                    <p className="text-xs text-success mt-1 flex items-center gap-1.5">
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Includes the WhatsApp assistant
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Without the WhatsApp assistant
-                    </p>
-                  )}
                 </button>
               ))}
             </div>
@@ -201,7 +189,6 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
             </button>
             <p className="text-sm text-foreground">
               {details.site_name} &mdash; {TIER_LABEL[selected.tier]}
-              {selected.bot && ' + WhatsApp assistant'}
             </p>
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
               <p className="text-sm text-foreground">
