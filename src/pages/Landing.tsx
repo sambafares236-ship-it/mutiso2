@@ -69,7 +69,7 @@ const FAQS = [
   },
   {
     q: 'Is there a free trial?',
-    a: "No — billing starts as soon as your site is approved. There's no free trial period.",
+    a: 'Yes — every contractor gets one free 7-day trial with full Pro-tier access on one site, no card required. After that, pick a plan to keep going.',
   },
   {
     q: 'Do I need a smartphone app or special hardware?',
@@ -307,6 +307,9 @@ export default function Landing() {
         <div className="container px-4 max-w-4xl mx-auto">
           <h2 className="font-display text-2xl text-foreground text-center">Simple, per-site pricing</h2>
           <p className="text-center text-muted-foreground mt-2">Billed monthly via M-Pesa, per site, once your site is approved.</p>
+          <p className="text-center text-primary text-sm font-medium mt-1">
+            Start with a free 7-day Pro trial — no card required.
+          </p>
 
           <div className="mt-8 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="card-industrial p-6">
