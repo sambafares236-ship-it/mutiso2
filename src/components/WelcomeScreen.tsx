@@ -49,7 +49,7 @@ export function WelcomeScreen({ name, onStart, onDismiss }: WelcomeScreenProps) 
             <HardHat className="w-9 h-9 text-primary" />
           </div>
           <h2 className="font-display text-3xl text-primary">
-            {name ? `WELCOME, ${name.toUpperCase()}` : 'WELCOME TO MUTISO.AI'}
+            {name ? `WELCOME, ${name.toUpperCase()}` : 'WELCOME TO JENGAOPS'}
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
             Here&apos;s how to get your first site running. Three steps.

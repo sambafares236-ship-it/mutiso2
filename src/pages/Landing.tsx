@@ -164,7 +164,7 @@ export default function Landing() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <HardHat className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display text-lg text-primary">MUTISO.AI</span>
+            <span className="font-display text-lg text-primary">JENGAOPS</span>
           </button>
 
           {/* Desktop nav links */}
