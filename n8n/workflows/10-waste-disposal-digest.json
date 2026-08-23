@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"♻️ *Waste Disposal Compliance Digest*\\n\\n\" + $json.total_entries + \" waste log entr\" + ($json.total_entries == 1 ? 'y' : 'ies') + \" this week:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"♻️ *Waste Disposal Compliance Digest*\\n\\n\" + $json.total_entries + \" waste log entr\" + ($json.total_entries == 1 ? 'y' : 'ies') + \" this week:\\n\\n\" + $json.digest_body + \"\\n\\nOpen JengaOps to review.\" } }}",
         "options": {}
       },
       "credentials": {

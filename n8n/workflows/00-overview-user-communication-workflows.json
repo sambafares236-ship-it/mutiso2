@@ -19,7 +19,7 @@
         "width": 1500,
         "height": 140,
         "color": 4,
-        "content": "# 📡 Mutiso.AI — Workflows That Communicate With Users\nEvery n8n workflow that sends a message to (or converses with) a real contractor/foreman, in one place. **Reference only — this workflow is inactive and never runs.** Full technical detail on each one lives in `n8n/README.md` in the repo.\n\n**Channel:** WhatsApp via Evolution API unless noted otherwise. Last updated 2026-07-18."
+        "content": "# 📡 JengaOps — Workflows That Communicate With Users\nEvery n8n workflow that sends a message to (or converses with) a real contractor/foreman, in one place. **Reference only — this workflow is inactive and never runs.** Full technical detail on each one lives in `n8n/README.md` in the repo.\n\n**Channel:** WhatsApp via Evolution API unless noted otherwise. Last updated 2026-07-18."
       }
     },
     {

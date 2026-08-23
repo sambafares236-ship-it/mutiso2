@@ -64,16 +64,16 @@ const FEATURES = [
 
 const FAQS = [
   {
-    q: 'Is Mutiso.AI built for the Kenyan construction market specifically?',
+    q: 'Is JengaOps built for the Kenyan construction market specifically?',
     a: 'Yes — pricing is in KES, and the safety/compliance workflows are built around OSHA 2007, WIBA 2007, DOSHS, NCA, and Energy Act 2019 references.',
   },
   {
     q: 'Is there a free trial?',
-    a: "No — billing starts as soon as your site is approved. There's no free trial period.",
+    a: 'Yes — every contractor gets one free 7-day trial with full Pro-tier access on one site, no card required. After that, pick a plan to keep going.',
   },
   {
     q: 'Do I need a smartphone app or special hardware?',
-    a: 'No — Mutiso.AI runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
+    a: 'No — JengaOps runs in your mobile browser and can be installed to your home screen like an app. Foremen can keep logging attendance and materials even with no signal; it syncs once back online.',
   },
   {
     q: 'How do I pay?',
@@ -83,7 +83,7 @@ const FAQS = [
 
 function currentOrigin() {
   if (typeof window !== 'undefined') return window.location.origin;
-  return 'https://mutisoai.vercel.app';
+  return 'https://jengaops.vercel.app';
 }
 
 export default function Landing() {
@@ -111,7 +111,7 @@ export default function Landing() {
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        name: 'Mutiso.AI',
+        name: 'JengaOps',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         description:
@@ -159,7 +159,7 @@ export default function Landing() {
           <button
             onClick={() => scrollToId('home')}
             className="flex items-center gap-2"
-            aria-label="Mutiso.AI home"
+            aria-label="JengaOps home"
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <HardHat className="w-4 h-4 text-primary-foreground" />
@@ -268,15 +268,15 @@ export default function Landing() {
       {/* About */}
       <section id="about" className="py-14">
         <div className="container px-4 max-w-3xl mx-auto text-center">
-          <h2 className="font-display text-2xl text-foreground">About Mutiso.AI</h2>
+          <h2 className="font-display text-2xl text-foreground">About JengaOps</h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Mutiso.AI is built by Jenga Technologies for contractors and foremen running real construction sites
+            JengaOps is built by Jenga Technologies for contractors and foremen running real construction sites
             across Kenya — not a generic global tool retrofitted for the local market. We built it because too many
             sites are still run on paper notebooks and scattered WhatsApp groups, where a missed message can mean a
             missed safety incident, a payroll dispute, or a material shortage nobody saw coming.
           </p>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Every workflow in Mutiso.AI — from attendance to incident reporting to payroll — is designed around how
+            Every workflow in JengaOps — from attendance to incident reporting to payroll — is designed around how
             Kenyan sites actually operate: KES pricing, M-Pesa billing, and safety processes built around OSHA 2007,
             WIBA 2007, DOSHS, NCA, and Energy Act 2019. Our goal is simple: give contractors real visibility into
             every site they run, and give foremen a tool that works even when the signal doesn't.
@@ -307,6 +307,9 @@ export default function Landing() {
         <div className="container px-4 max-w-4xl mx-auto">
           <h2 className="font-display text-2xl text-foreground text-center">Simple, per-site pricing</h2>
           <p className="text-center text-muted-foreground mt-2">Billed monthly via M-Pesa, per site, once your site is approved.</p>
+          <p className="text-center text-primary text-sm font-medium mt-1">
+            Start with a free 7-day Pro trial — no card required.
+          </p>
 
           <div className="mt-8 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="card-industrial p-6">
@@ -406,7 +409,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} Mutiso.AI</span>
+          <span>© {new Date().getFullYear()} JengaOps</span>
           <div className="flex gap-4">
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>

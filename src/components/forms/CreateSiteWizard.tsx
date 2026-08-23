@@ -3,8 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Building, X, Loader2, Send, CheckCircle2 } from 'lucide-react';
-import { useCreateSiteWithManualPayment } from '@/hooks/useSubscriptionPayment';
+import { Building, X, Loader2, Send, CheckCircle2, Sparkles } from 'lucide-react';
+import { useCreateSiteWithManualPayment, useStartTrialSite } from '@/hooks/useSubscriptionPayment';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +27,7 @@ type DetailsValues = z.infer<typeof detailsSchema>;
 // assistant existed, then reported the bot as broken. It is now one of the
 // plans you pick, so choosing it is a decision rather than something you have
 // to notice.
-type PlanId = 'field_ops' | 'field_ops_bot' | 'pro' | 'pro_bot';
+type PlanId = 'field_ops' | 'field_ops_bot' | 'pro' | 'pro_bot' | 'trial';
 
 interface PlanOption {
   id: PlanId;
@@ -39,19 +41,26 @@ const PLANS: PlanOption[] = [
   { id: 'pro', tier: 'pro', bot: false, price: TIER_PRICING.pro.base },
 ];
 
+// Trial is a full Pro-tier site for 7 days, no payment. Kept as a distinct
+// pseudo-plan rather than a PlanOption entry since it has no price and
+// skips the payment step entirely (see handleStartTrial below).
+
 interface CreateSiteWizardProps {
   onClose: () => void;
 }
 
 // Three-step overlay: details -> plan -> payment. Nothing is written to the
 // database until the final submit, so going back or cancelling leaves no
-// trace - a site row is not allowed to exist without a payment record beside
-// it (create_site_with_manual_payment() inserts both atomically).
+// trace - a paid site row is not allowed to exist without a payment record
+// beside it (create_site_with_manual_payment() inserts both atomically).
 //
-// Payment is required up front; there is no free trial. The trial schema
-// (sites.is_trial, profiles.trial_used_at, start_trial_site()) is deliberately
-// left in place but dormant and unreachable from the UI, so re-enabling it
-// later is a frontend change rather than another migration.
+// Trial is the one exception to that "payment first" rule: an eligible
+// contractor (trial_used_at still null on their profile) sees a Free 7-Day
+// Trial option on the plan step. Picking it calls start_trial_site()
+// directly and skips the payment step entirely - the site goes active with
+// full Pro-tier access immediately, no admin approval needed. One trial per
+// account: once used, trial_used_at is set and this option stops appearing
+// (also enforced server-side by the RPC, not just hidden client-side).
 //
 // Manual payment only for this pass - PAYMENT_MODE is 'manual' in
 // src/lib/payment.ts, the STK path stays dormant until production Daraja
@@ -61,8 +70,17 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
   const [details, setDetails] = useState<DetailsValues | null>(null);
   const [plan, setPlan] = useState<PlanId | null>(null);
   const [mpesaCode, setMpesaCode] = useState('');
+  const [trialSiteName, setTrialSiteName] = useState<string | null>(null);
 
   const createSite = useCreateSiteWithManualPayment();
+  const startTrial = useStartTrialSite();
+  const { user } = useAuth();
+  const { data: profile } = useProfile(user?.id);
+
+  // trial_used_at is non-null the moment a trial is started (see
+  // start_trial_site()), so this is a live eligibility check, not just a
+  // display toggle - the RPC itself would reject a second attempt regardless.
+  const trialEligible = !!profile && !profile.trial_used_at;
 
   const {
     register,
@@ -76,6 +94,24 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
   };
 
   const selected = PLANS.find((p) => p.id === plan) ?? null;
+
+  // Trial has no payment step - the site is created active immediately, so
+  // this goes straight from the plan step to 'done'.
+  const handleStartTrial = async () => {
+    if (!details) return;
+    try {
+      await startTrial.mutateAsync({
+        site_name: details.site_name,
+        location: details.location,
+      });
+      setTrialSiteName(details.site_name);
+      setStep('done');
+    } catch (err) {
+      toast.error('Could not start trial', {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
 
   const handleReportPayment = async () => {
     if (!details || !selected) return;
@@ -141,6 +177,34 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
             </button>
             <p className="text-sm text-foreground">{details.site_name}</p>
 
+            {trialEligible && (
+              <button
+                type="button"
+                onClick={() => setPlan('trial')}
+                aria-pressed={plan === 'trial'}
+                className={cn(
+                  'w-full text-left rounded-lg border-2 p-4 transition-colors',
+                  plan === 'trial'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-primary/60 bg-primary/5 hover:border-primary',
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Free 7-Day Trial
+                  </span>
+                  <span className="font-display text-xl text-primary">
+                    {formatKES(0)}
+                    <span className="text-xs text-muted-foreground font-sans">/wk</span>
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Full {TIER_LABEL.pro} access on one site, no payment required. One trial per account.
+                </p>
+              </button>
+            )}
+
             <div className="space-y-3">
               {PLANS.map((p) => (
                 <button
@@ -170,10 +234,13 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
               variant="construction"
               size="touch"
               className="w-full"
-              onClick={() => setStep('payment')}
-              disabled={!plan}
+              onClick={() => (plan === 'trial' ? handleStartTrial() : setStep('payment'))}
+              disabled={!plan || startTrial.isPending}
             >
-              Continue to Payment
+              {startTrial.isPending ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : null}
+              {plan === 'trial' ? 'Start Free Trial' : 'Continue to Payment'}
             </Button>
           </div>
         )}
@@ -230,10 +297,13 @@ export function CreateSiteWizard({ onClose }: CreateSiteWizardProps) {
         {step === 'done' && (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
             <CheckCircle2 className="w-10 h-10 text-success" />
-            <p className="text-foreground font-medium">Site created</p>
+            <p className="text-foreground font-medium">
+              {trialSiteName ? `${trialSiteName} is live` : 'Site created'}
+            </p>
             <p className="text-sm text-muted-foreground max-w-xs">
-              We&apos;ll confirm your payment and an admin will review the site shortly. You can
-              check its status from Your Sites.
+              {trialSiteName
+                ? `Your 7-day free trial has started with full ${TIER_LABEL.pro} access. Add a plan any time from Billing before it ends.`
+                : "We'll confirm your payment and an admin will review the site shortly. You can check its status from Your Sites."}
             </p>
             <Button variant="outline" onClick={onClose}>
               Done

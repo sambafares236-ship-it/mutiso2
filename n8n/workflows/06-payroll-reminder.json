@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"💰 *Payroll Reminder*\\n\\nYou haven't run payroll yet for the week of \" + $json.week_start + \" - \" + $json.week_end + \" for \" + $json.site_count + \" site(s): \" + $json.site_names + \".\\n\\nOpen Mutiso.AI to generate payroll.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"💰 *Payroll Reminder*\\n\\nYou haven't run payroll yet for the week of \" + $json.week_start + \" - \" + $json.week_end + \" for \" + $json.site_count + \" site(s): \" + $json.site_names + \".\\n\\nOpen JengaOps to generate payroll.\" } }}",
         "options": {}
       },
       "credentials": {

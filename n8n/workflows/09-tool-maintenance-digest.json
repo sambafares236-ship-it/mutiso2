@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"🛠️ *Tool & Maintenance Digest*\\n\\n\" + $json.item_count + \" item(s) needing attention:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"🛠️ *Tool & Maintenance Digest*\\n\\n\" + $json.item_count + \" item(s) needing attention:\\n\\n\" + $json.digest_body + \"\\n\\nOpen JengaOps to review.\" } }}",
         "options": {}
       },
       "credentials": {

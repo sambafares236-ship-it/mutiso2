@@ -96,9 +96,9 @@
         "resource": "message",
         "operation": "send",
         "sendTo": "={{ $('Invite Created Webhook').item.json.body.email }}",
-        "subject": "={{ \"You've been invited to join \" + $('Invite Created Webhook').item.json.body.site_name + \" on Mutiso.AI\" }}",
+        "subject": "={{ \"You've been invited to join \" + $('Invite Created Webhook').item.json.body.site_name + \" on JengaOps\" }}",
         "emailType": "html",
-        "message": "={{ \"<p>You've been invited to join <strong>\" + $('Invite Created Webhook').item.json.body.site_name + \"</strong> as a foreman on Mutiso.AI.</p><p><a href='https://mutisoai.vercel.app/join?token=\" + $('Invite Created Webhook').item.json.body.token + \"'>Click here to accept the invite</a></p><p>This link expires on \" + $('Invite Created Webhook').item.json.body.expires_at + \".</p><p>If you weren't expecting this invite, you can ignore this email.</p>\" }}",
+        "message": "={{ \"<p>You've been invited to join <strong>\" + $('Invite Created Webhook').item.json.body.site_name + \"</strong> as a foreman on JengaOps.</p><p><a href='https://jengaops.vercel.app/join?token=\" + $('Invite Created Webhook').item.json.body.token + \"'>Click here to accept the invite</a></p><p>This link expires on \" + $('Invite Created Webhook').item.json.body.expires_at + \".</p><p>If you weren't expecting this invite, you can ignore this email.</p>\" }}",
         "options": {}
       },
       "credentials": {

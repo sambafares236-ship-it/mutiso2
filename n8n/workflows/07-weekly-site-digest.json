@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📊 *Weekly Site Digest — \" + $json.site_name + \"*\\n\" + $json.week_start + \" - \" + $json.week_end + \"\\n\\n• Attendance marks: \" + $json.attendance_days + \"\\n• New diary entries: \" + $json.diary_count + \"\\n• Defects opened: \" + $json.defects_opened + \"\\n• Defects closed: \" + $json.defects_closed + \"\\n• Milestones completed: \" + $json.milestones_completed + \"\\n\\nOpen Mutiso.AI for details.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📊 *Weekly Site Digest — \" + $json.site_name + \"*\\n\" + $json.week_start + \" - \" + $json.week_end + \"\\n\\n• Attendance marks: \" + $json.attendance_days + \"\\n• New diary entries: \" + $json.diary_count + \"\\n• Defects opened: \" + $json.defects_opened + \"\\n• Defects closed: \" + $json.defects_closed + \"\\n• Milestones completed: \" + $json.milestones_completed + \"\\n\\nOpen JengaOps for details.\" } }}",
         "options": {}
       },
       "credentials": {

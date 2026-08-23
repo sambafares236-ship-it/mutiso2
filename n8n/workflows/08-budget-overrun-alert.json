@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"⚠️ *Budget Overrun Alert*\\n\\n\" + $json.flagged_count + \" budget line(s) at or above 90% spent:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"⚠️ *Budget Overrun Alert*\\n\\n\" + $json.flagged_count + \" budget line(s) at or above 90% spent:\\n\\n\" + $json.digest_body + \"\\n\\nOpen JengaOps to review.\" } }}",
         "options": {}
       },
       "credentials": {

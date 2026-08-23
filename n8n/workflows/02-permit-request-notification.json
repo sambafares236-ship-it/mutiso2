@@ -104,7 +104,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $('Permit Requested Webhook').item.json.body.owner_phone.replace(/\\D/g, ''), \"text\": \"📋 *Permit-to-Work Requested*\\n\\nSite: \" + $('Permit Requested Webhook').item.json.body.site_name + \"\\nType: \" + $('Permit Requested Webhook').item.json.body.permit_type + \"\\nRequested by: \" + ($('Permit Requested Webhook').item.json.body.requested_by_name || 'n/a') + \"\\nValid: \" + ($('Permit Requested Webhook').item.json.body.valid_from || 'n/a') + \" to \" + ($('Permit Requested Webhook').item.json.body.valid_to || 'n/a') + \"\\n\\n\" + ($('Permit Requested Webhook').item.json.body.description || '') + \"\\n\\nOpen Mutiso.AI to review and approve/reject.\" } }}",
+        "jsonBody": "={{ { \"number\": $('Permit Requested Webhook').item.json.body.owner_phone.replace(/\\D/g, ''), \"text\": \"📋 *Permit-to-Work Requested*\\n\\nSite: \" + $('Permit Requested Webhook').item.json.body.site_name + \"\\nType: \" + $('Permit Requested Webhook').item.json.body.permit_type + \"\\nRequested by: \" + ($('Permit Requested Webhook').item.json.body.requested_by_name || 'n/a') + \"\\nValid: \" + ($('Permit Requested Webhook').item.json.body.valid_from || 'n/a') + \" to \" + ($('Permit Requested Webhook').item.json.body.valid_to || 'n/a') + \"\\n\\n\" + ($('Permit Requested Webhook').item.json.body.description || '') + \"\\n\\nOpen JengaOps to review and approve/reject.\" } }}",
         "options": {}
       },
       "credentials": {
