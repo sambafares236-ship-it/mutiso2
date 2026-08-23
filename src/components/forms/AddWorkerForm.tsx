@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { useAddWorker } from '@/hooks/useWorkers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TradeCombobox } from '@/components/forms/TradeCombobox';
 
 const schema = z.object({
   worker_id_number: z.string().min(1, 'ID number is required'),
@@ -29,6 +30,7 @@ export function AddWorkerForm({ siteId, onClose, onAdded }: AddWorkerFormProps) 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormInput, unknown, FormValues>({ resolver: zodResolver(schema) });
 
@@ -69,8 +71,14 @@ export function AddWorkerForm({ siteId, onClose, onAdded }: AddWorkerFormProps) 
             {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="trade">Trade</Label>
-            <Input id="trade" placeholder="Mason, Electrician..." {...register('trade')} />
+            <Label>Trade</Label>
+            <Controller
+              name="trade"
+              control={control}
+              render={({ field }) => (
+                <TradeCombobox siteId={siteId} value={field.value} onChange={field.onChange} />
+              )}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="daily_rate">Daily Rate (KES)</Label>

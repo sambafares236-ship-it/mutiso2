@@ -2077,6 +2077,41 @@ export type Database = {
           },
         ]
       }
+      site_trades: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_custom: boolean
+          name: string
+          site_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_custom?: boolean
+          name: string
+          site_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_custom?: boolean
+          name?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_trades_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tool_inventory: {
         Row: {
           category: string
@@ -2694,6 +2729,10 @@ export type Database = {
       _extend_site_subscription: {
         Args: { p_includes_bot: boolean; p_site_id: string }
         Returns: undefined
+      }
+      add_site_trade: {
+        Args: { p_name: string; p_site_id: string }
+        Returns: string
       }
       approve_site: { Args: { p_site_id: string }; Returns: undefined }
       bot_query_site_data: {

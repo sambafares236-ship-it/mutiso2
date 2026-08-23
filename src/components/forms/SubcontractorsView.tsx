@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TradeCombobox } from '@/components/forms/TradeCombobox';
 
 const schema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
@@ -235,6 +236,7 @@ function AddSubcontractorForm({ siteId, onClose }: { siteId: string; onClose: ()
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -264,8 +266,14 @@ function AddSubcontractorForm({ siteId, onClose }: { siteId: string; onClose: ()
             {errors.company_name && <p className="text-xs text-destructive">{errors.company_name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="trade">Trade</Label>
-            <Input id="trade" placeholder="Plumbing, Electrical..." {...register('trade')} />
+            <Label>Trade</Label>
+            <Controller
+              name="trade"
+              control={control}
+              render={({ field }) => (
+                <TradeCombobox siteId={siteId} value={field.value} onChange={field.onChange} />
+              )}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="contact_name">Contact Name</Label>
