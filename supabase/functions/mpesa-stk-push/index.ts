@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       PhoneNumber: normalizedPhone,
       CallBackURL: MPESA_CALLBACK_URL,
       AccountReference: site_id,
-      TransactionDesc: 'Mutiso.AI subscription renewal',
+      TransactionDesc: 'JengaOps subscription renewal',
     }),
   });
 

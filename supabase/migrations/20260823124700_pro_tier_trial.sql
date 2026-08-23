@@ -8,7 +8,7 @@
 -- phone_number - unchanged from 20260731091800).
 --
 -- Also drops the WhatsApp-bot-in-trial logic: the bot has since been
--- removed from client-facing UI entirely (see the Mutiso.AI -> JengaOps
+-- removed from client-facing UI entirely (see the JengaOps -> JengaOps
 -- rebrand commits), so a trial that still silently enabled it would be
 -- offering a feature no longer exposed anywhere in the app.
 --

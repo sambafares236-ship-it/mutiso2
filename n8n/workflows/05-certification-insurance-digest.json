@@ -70,7 +70,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📄 *Certification & Insurance Expiry Digest*\\n\\n\" + $json.item_count + \" item(s) expiring within 30 days:\\n\\n\" + $json.digest_body + \"\\n\\nOpen Mutiso.AI to review and renew.\" } }}",
+        "jsonBody": "={{ { \"number\": $json.owner_phone.replace(/\\D/g, ''), \"text\": \"📄 *Certification & Insurance Expiry Digest*\\n\\n\" + $json.item_count + \" item(s) expiring within 30 days:\\n\\n\" + $json.digest_body + \"\\n\\nOpen JengaOps to review and renew.\" } }}",
         "options": {}
       },
       "credentials": {

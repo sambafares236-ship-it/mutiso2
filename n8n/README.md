@@ -1,6 +1,6 @@
 # n8n workflows
 
-Exported JSON for every n8n workflow built for Mutiso.AI. The n8n instance itself is the source
+Exported JSON for every n8n workflow built for JengaOps. The n8n instance itself is the source
 of truth — these exports are for version control / disaster recovery / code review, not for
 editing directly. After changing a workflow in n8n, re-export it here (see "Re-exporting" below).
 
@@ -48,7 +48,7 @@ editing directly. After changing a workflow in n8n, re-export it here (see "Re-e
   n8n's UI (Credentials → Gmail account → connect), after which sending worked immediately. **Any
   future OAuth2-type credential (Gmail, Google Sheets, etc.) will need this same manual one-time
   connect step** — it can't be finished through the API.
-- **Join links use `https://mutisoai.vercel.app`** (the production Vercel domain, confirmed with the
+- **Join links use `https://jengaops.vercel.app`** (the production Vercel domain, confirmed with the
   user directly rather than guessed) as the hardcoded base for `/join?token=...`, matching what
   `useCreateInvite()`'s removed client-side call used to build from `window.location.origin`.
 - Resend was considered (per the original build request) but **Gmail was already connected and
@@ -81,7 +81,7 @@ real trigger beyond a placeholder Manual Trigger required by n8n's "at least one
 rule), containing one sticky note per workflow below that actually sends something to a user
 (digests, alerts, the invite email, the chatbot — not `11b`'s internal sub-workflow). Grouped into
 three sticky-note-headed sections (event-triggered / scheduled digests / conversational). Exists
-so the whole "what messages does Mutiso.AI send, and when" picture is visible in one place without
+so the whole "what messages does JengaOps send, and when" picture is visible in one place without
 opening all 11 workflows individually — re-generate/edit it directly by hand if a workflow's
 trigger or behavior changes, this isn't kept in sync automatically.
 
@@ -392,7 +392,7 @@ final exported JSON should only ever have the one real Schedule Trigger.
 - **Flow**: verify secret → check `email` present (skip cleanly with 200 if not) → send via Gmail
   (`resource: message`, `operation: send`, HTML body with a join link built from the token) →
   respond 200.
-- **The join link's base URL (`https://mutisoai.vercel.app`) is hardcoded in the node**, confirmed
+- **The join link's base URL (`https://jengaops.vercel.app`) is hardcoded in the node**, confirmed
   directly with the user rather than guessed (URLs are never fabricated) — update this node's
   `message` expression if the production domain ever changes.
 - **Verified end-to-end 2026-07-16**: first attempt failed with `Unable to sign without access

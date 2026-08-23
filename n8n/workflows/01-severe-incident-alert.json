@@ -105,7 +105,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $('Severe Incident Webhook').item.json.body.owner_phone.replace(/\\D/g, ''), \"text\": \"🚨 *Severe Incident Reported*\\n\\nSite: \" + $('Severe Incident Webhook').item.json.body.site_name + \"\\nSeverity: \" + $('Severe Incident Webhook').item.json.body.severity + \"\\nCategory: \" + $('Severe Incident Webhook').item.json.body.category + \"\\nDate: \" + $('Severe Incident Webhook').item.json.body.date + \"\\nWorkers involved: \" + ($('Severe Incident Webhook').item.json.body.workers_involved || 'n/a') + \"\\n\\n\" + $('Severe Incident Webhook').item.json.body.description + \"\\n\\nOpen Mutiso.AI to review and respond.\" } }}",
+        "jsonBody": "={{ { \"number\": $('Severe Incident Webhook').item.json.body.owner_phone.replace(/\\D/g, ''), \"text\": \"🚨 *Severe Incident Reported*\\n\\nSite: \" + $('Severe Incident Webhook').item.json.body.site_name + \"\\nSeverity: \" + $('Severe Incident Webhook').item.json.body.severity + \"\\nCategory: \" + $('Severe Incident Webhook').item.json.body.category + \"\\nDate: \" + $('Severe Incident Webhook').item.json.body.date + \"\\nWorkers involved: \" + ($('Severe Incident Webhook').item.json.body.workers_involved || 'n/a') + \"\\n\\n\" + $('Severe Incident Webhook').item.json.body.description + \"\\n\\nOpen JengaOps to review and respond.\" } }}",
         "options": {}
       },
       "credentials": {

@@ -94,7 +94,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $('WhatsApp Inbound Webhook').item.json.body.data.key.remoteJid.split('@')[0], \"text\": \"Sorry, I don't recognize this number as a Mutiso.AI contractor account. If this is a mistake, please contact support.\" } }}",
+        "jsonBody": "={{ { \"number\": $('WhatsApp Inbound Webhook').item.json.body.data.key.remoteJid.split('@')[0], \"text\": \"Sorry, I don't recognize this number as a JengaOps contractor account. If this is a mistake, please contact support.\" } }}",
         "options": {}
       },
       "credentials": {
@@ -111,7 +111,7 @@
         "promptType": "define",
         "text": "={{ $('WhatsApp Inbound Webhook').item.json.body.data.message.conversation || $('WhatsApp Inbound Webhook').item.json.body.data.message.extendedTextMessage.text }}",
         "options": {
-          "systemMessage": "=You are a helpful assistant for a Kenyan construction-site management app called Mutiso.AI, chatting via WhatsApp with {{ $json.full_name }}, a contractor.\n\nThis contractor owns the following active site(s): {{ JSON.stringify($json.sites) }}\n\nRules:\n- If they ask about a specific site by name, match it case-insensitively against the list above and use that exact site_id when calling query_site_data.\n- If they own more than one site and their question doesn't make clear which site they mean, ask them to clarify by name (list the site names for them) BEFORE calling any tool.\n- If they only own one site, assume every question is about it without asking.\n- NEVER invent, guess, or reuse a site_id from a previous conversation - only ever use one of the site_id values listed above for THIS contractor.\n- Use the query_site_data tool for questions about: attendance, deliveries, usage (materials used), inventory, incidents, defects, diary (day-to-day site activity log), progress (percent complete/milestones/overdue activities), payroll, visitors, certifications, permits, budget.\n- Keep answers concise and conversational, formatted as plain text suitable for WhatsApp - no markdown tables, no headers.\n- WhatsApp formatting only: use single asterisks for *bold* (never double asterisks/markdown **bold**), single underscores for _italic_. Use short line breaks and dash bullets, not numbered markdown lists.\n- If a query returns no data, say so plainly rather than making something up.\n- Today's date is {{ $now.format('yyyy-MM-dd') }}."
+          "systemMessage": "=You are a helpful assistant for a Kenyan construction-site management app called JengaOps, chatting via WhatsApp with {{ $json.full_name }}, a contractor.\n\nThis contractor owns the following active site(s): {{ JSON.stringify($json.sites) }}\n\nRules:\n- If they ask about a specific site by name, match it case-insensitively against the list above and use that exact site_id when calling query_site_data.\n- If they own more than one site and their question doesn't make clear which site they mean, ask them to clarify by name (list the site names for them) BEFORE calling any tool.\n- If they only own one site, assume every question is about it without asking.\n- NEVER invent, guess, or reuse a site_id from a previous conversation - only ever use one of the site_id values listed above for THIS contractor.\n- Use the query_site_data tool for questions about: attendance, deliveries, usage (materials used), inventory, incidents, defects, diary (day-to-day site activity log), progress (percent complete/milestones/overdue activities), payroll, visitors, certifications, permits, budget.\n- Keep answers concise and conversational, formatted as plain text suitable for WhatsApp - no markdown tables, no headers.\n- WhatsApp formatting only: use single asterisks for *bold* (never double asterisks/markdown **bold**), single underscores for _italic_. Use short line breaks and dash bullets, not numbered markdown lists.\n- If a query returns no data, say so plainly rather than making something up.\n- Today's date is {{ $now.format('yyyy-MM-dd') }}."
         }
       }
     },
@@ -148,7 +148,7 @@
       "typeVersion": 2.2,
       "position": [1088, 384],
       "parameters": {
-        "description": "Query real Mutiso.AI site data for this contractor. query_type must be exactly one of: attendance, deliveries, usage, inventory, incidents, defects, diary, progress, payroll, visitors, certifications, permits, budget. site_id must be exactly one of the site_id values given in the system message for this contractor - never invent or guess one. date_range_days is optional (defaults to 30).",
+        "description": "Query real JengaOps site data for this contractor. query_type must be exactly one of: attendance, deliveries, usage, inventory, incidents, defects, diary, progress, payroll, visitors, certifications, permits, budget. site_id must be exactly one of the site_id values given in the system message for this contractor - never invent or guess one. date_range_days is optional (defaults to 30).",
         "source": "database",
         "workflowId": { "__rl": true, "mode": "id", "value": "jLa2V5JyIieyDY5V" },
         "workflowInputs": {

@@ -104,7 +104,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { \"number\": $('Variation Order Webhook').item.json.body.foreman_phone.replace(/\\D/g, ''), \"text\": \"📝 *Variation Order Raised*\\n\\nSite: \" + $('Variation Order Webhook').item.json.body.site_name + \"\\nTitle: \" + $('Variation Order Webhook').item.json.body.title + \"\\nCost impact: \" + ($('Variation Order Webhook').item.json.body.cost_impact != null ? 'KES ' + Number($('Variation Order Webhook').item.json.body.cost_impact).toLocaleString('en-KE') : 'n/a') + \"\\nTime impact: \" + ($('Variation Order Webhook').item.json.body.time_impact_days != null ? $('Variation Order Webhook').item.json.body.time_impact_days + ' day(s)' : 'n/a') + \"\\n\\n\" + $('Variation Order Webhook').item.json.body.description + \"\\n\\nOpen Mutiso.AI for details.\" } }}",
+        "jsonBody": "={{ { \"number\": $('Variation Order Webhook').item.json.body.foreman_phone.replace(/\\D/g, ''), \"text\": \"📝 *Variation Order Raised*\\n\\nSite: \" + $('Variation Order Webhook').item.json.body.site_name + \"\\nTitle: \" + $('Variation Order Webhook').item.json.body.title + \"\\nCost impact: \" + ($('Variation Order Webhook').item.json.body.cost_impact != null ? 'KES ' + Number($('Variation Order Webhook').item.json.body.cost_impact).toLocaleString('en-KE') : 'n/a') + \"\\nTime impact: \" + ($('Variation Order Webhook').item.json.body.time_impact_days != null ? $('Variation Order Webhook').item.json.body.time_impact_days + ' day(s)' : 'n/a') + \"\\n\\n\" + $('Variation Order Webhook').item.json.body.description + \"\\n\\nOpen JengaOps for details.\" } }}",
         "options": {}
       },
       "credentials": {
