@@ -2,9 +2,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, X, Loader2, MessageCircle, Mail, Smartphone } from 'lucide-react';
+import { Settings as SettingsIcon, X, Loader2, MessageCircle, Mail, Smartphone, HardHat } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useAdminSites, useSiteForeman } from '@/hooks/useSite';
 import { normalizeKenyanPhone, formatKenyanPhone } from '@/lib/phone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,66 @@ interface SettingsViewProps {
   onClose: () => void;
   /** Contractors pay subscriptions; foremen don't, so they don't see this field. */
   showPaymentNumber?: boolean;
+}
+
+// Own hook call per row - site_assignments/profiles have no FK PostgREST
+// can auto-join (see useSiteForeman), so each site's foreman is a separate
+// query rather than one batched fetch.
+function ForemanRow({ siteId, siteName }: { siteId: string; siteName: string }) {
+  const { data: foreman, isLoading } = useSiteForeman(siteId);
+
+  if (isLoading) return <Skeleton className="h-12 w-full rounded-lg" />;
+
+  return (
+    <div className="flex items-center gap-3 bg-secondary rounded-lg px-3 py-2">
+      <HardHat className="w-4 h-4 text-primary shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground truncate">{siteName}</p>
+        {foreman ? (
+          <>
+            <p className="text-sm text-foreground truncate">{foreman.full_name ?? 'Unnamed foreman'}</p>
+            {foreman.email_address && (
+              <p className="text-xs text-muted-foreground truncate">{foreman.email_address}</p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">No foreman assigned</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Contractor/admin only - a foreman has no other sites to see foremen for,
+// and this is where the per-site foreman name/email now lives instead of
+// crowding the site cards on the dashboard.
+function AssignedForemenSection() {
+  const { data: sites, isLoading } = useAdminSites();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-12 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  if (!sites?.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2">
+        <HardHat className="w-4 h-4 text-muted-foreground" />
+        Assigned foremen
+      </Label>
+      <div className="space-y-2">
+        {sites.map((site) => (
+          <ForemanRow key={site.id} siteId={site.id} siteName={site.site_name} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function SettingsView({ onClose, showPaymentNumber = false }: SettingsViewProps) {
@@ -218,6 +279,13 @@ export function SettingsView({ onClose, showPaymentNumber = false }: SettingsVie
             </div>
           </form>
         )}
+
+        {/* This view is never shown to a foreman (see Index.tsx), so every
+            viewer here is a contractor/admin - safe to always show their
+            sites' foremen without further role gating. */}
+        <div className="mt-8 pt-6 border-t border-border">
+          <AssignedForemenSection />
+        </div>
       </div>
     </div>
   );

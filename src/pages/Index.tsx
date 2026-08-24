@@ -763,14 +763,19 @@ export default function Index() {
         <h1 className="font-display text-xl text-primary">JENGAOPS</h1>
         <div className="flex items-center gap-3">
           <RoleBadge />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSettings(true)}
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </Button>
+          {/* Foremen have no settings screen - their contact details are
+              collected once at invite-acceptance time, and this app has
+              nothing else per-user for them to configure. */}
+          {!isForeman && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              aria-label="Settings"
+            >
+              <Settings className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
             <LogOut className="w-5 h-5 text-muted-foreground" />
           </Button>
@@ -797,9 +802,9 @@ export default function Index() {
         )}
       </main>
 
-      {showSettings && (
+      {showSettings && !isForeman && (
         // The M-Pesa field is only meaningful for the role that actually pays
-        // for subscriptions; a foreman just needs their contact details.
+        // for subscriptions.
         <SettingsView showPaymentNumber={isAdmin} onClose={() => setShowSettings(false)} />
       )}
     </div>
