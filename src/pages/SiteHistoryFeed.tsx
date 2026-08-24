@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, History, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, History, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSiteHistoryFeed } from '@/hooks/useSiteHistoryFeed';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FeedPostCard } from '@/components/FeedPostCard';
 import { GroupedFeedCard } from '@/components/GroupedFeedCard';
+import { ExportPanel } from '@/components/ExportPanel';
 
 // Site's `sites` row is RLS-protected by owns_site()/is_assigned_foreman()
 // same as every other site-scoped table, so a plain select here already
@@ -31,6 +33,7 @@ export default function SiteHistoryFeed() {
   const { user } = useAuth();
   const { data: siteName } = useSiteName(siteId);
   const { items, isLoading, isLoadingMore, hasMore, loadMore } = useSiteHistoryFeed(siteId);
+  const [showExport, setShowExport] = useState(false);
 
   const goBack = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
@@ -58,6 +61,9 @@ export default function SiteHistoryFeed() {
             <h1 className="font-display text-xl text-primary leading-tight">SITE HISTORY</h1>
             {siteName && <p className="text-xs text-muted-foreground truncate">{siteName}</p>}
           </div>
+          <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setShowExport(true)} aria-label="Export CSV">
+            <Download className="w-5 h-5 text-muted-foreground" />
+          </Button>
         </div>
       </div>
 
@@ -98,6 +104,8 @@ export default function SiteHistoryFeed() {
           </>
         )}
       </div>
+
+      {showExport && siteId && <ExportPanel siteId={siteId} onClose={() => setShowExport(false)} />}
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSiteReport } from '@/hooks/useSiteReport';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TYPE_ICON, TYPE_LABEL, TYPE_COLOR_VAR } from '@/components/CategoryRow';
 import { formatFeedDate } from '@/lib/feedDate';
+import { downloadFile } from '@/lib/utils';
 
 function daysAround(iso: string, pad: number) {
   const base = new Date(iso);
@@ -96,13 +97,25 @@ export default function SiteHistoryEntryDetail() {
             {photos.length > 0 && (
               <div className={photos.length === 1 ? '' : 'grid grid-cols-2 gap-2'}>
                 {photos.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
-                    <img
-                      src={url}
-                      alt={`${entry.title} — photo ${i + 1}`}
-                      className="w-full rounded-lg border border-border object-cover"
-                    />
-                  </a>
+                  <div key={i} className="relative">
+                    <a href={url} target="_blank" rel="noreferrer" className="block">
+                      <img
+                        src={url}
+                        alt={`${entry.title} — photo ${i + 1}`}
+                        className="w-full rounded-lg border border-border object-cover"
+                      />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadFile(url, `${entry.type}-${entry.id}${photos.length > 1 ? `-${i + 1}` : ''}.jpg`)
+                      }
+                      className="absolute bottom-2 right-2 p-1.5 rounded-md bg-background/80 border border-border hover:bg-background transition-colors"
+                      title="Download photo"
+                    >
+                      <Download className="w-3.5 h-3.5 text-foreground" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
