@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   X,
@@ -43,7 +44,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScheduleSummaryChart } from '@/components/ScheduleSummaryChart';
 import { CategoryRow, TYPE_ORDER } from '@/components/CategoryRow';
 import { MilestonesView } from './MilestonesView';
-import { SiteReportView } from './SiteReportView';
 import { PayrollView } from './PayrollView';
 import { VariationOrdersView } from './VariationOrdersView';
 import { ScheduleUploadDialog } from './ScheduleUploadDialog';
@@ -405,6 +405,7 @@ function SectionCard({
 }
 
 export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClose }: ProjectOverviewViewProps) {
+  const navigate = useNavigate();
   const { isContractor } = useAuth();
   // Feature gate, mirroring the tier RLS gate (owns_pro_site/
   // is_assigned_foreman_of_pro_site) - hiding these here is a UX nicety,
@@ -427,7 +428,6 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
     | 'certificates'
     | 'payroll'
     | 'variations'
-    | 'history'
     | 'certifications'
     | 'subcontractors'
     | 'materialPayments'
@@ -471,13 +471,13 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
             action={
               <div className="flex items-center gap-2">
                 <VisitorTodayBadge siteId={siteId} />
-                <Button size="sm" variant="ghost" onClick={() => setSubView('history')}>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/app/history/${siteId}`)}>
                   View all <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             }
           >
-            <SiteHistoryPreview siteId={siteId} onOpenHistory={() => setSubView('history')} />
+            <SiteHistoryPreview siteId={siteId} onOpenHistory={() => navigate(`/app/history/${siteId}`)} />
           </SectionCard>
 
           {isPro && (
@@ -664,7 +664,6 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
 
       {subView === 'schedule' && <ScheduleDetailView siteId={siteId} onClose={() => setSubView(null)} />}
       {subView === 'milestones' && <MilestonesView siteId={siteId} onClose={() => setSubView(null)} />}
-      {subView === 'history' && <SiteReportView siteId={siteId} onClose={() => setSubView(null)} excludeTypes={['defect']} />}
       {subView === 'payroll' && <PayrollView siteId={siteId} onClose={() => setSubView(null)} />}
       {subView === 'variations' && <VariationOrdersView siteId={siteId} onClose={() => setSubView(null)} />}
       {subView === 'contract' && <ContractView siteId={siteId} onClose={() => setSubView(null)} />}

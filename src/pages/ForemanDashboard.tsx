@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Truck,
   Hammer,
@@ -40,7 +41,6 @@ import { ToolboxTalkForm } from '@/components/forms/ToolboxTalkForm';
 import { InspectionForm } from '@/components/forms/InspectionForm';
 import { PermitsView } from '@/components/forms/PermitsView';
 import { DefectsView } from '@/components/forms/DefectsView';
-import { SiteReportView } from '@/components/forms/SiteReportView';
 import { ToolsView } from '@/components/forms/ToolsView';
 import { VisitorLogView } from '@/components/forms/VisitorLogView';
 import { CertificationsView } from '@/components/forms/CertificationsView';
@@ -288,6 +288,18 @@ function CategorySidebar({
 export default function ForemanDashboard() {
   const { data: site, isLoading } = useForemanSite();
   const [activeForm, setActiveForm] = useState<FormType>(null);
+  const navigate = useNavigate();
+
+  // Site History is the one tile that navigates to its own page (per the
+  // feed redesign) instead of opening an overlay like every other tile
+  // here still does.
+  const handleSelectTile = (key: FormType) => {
+    if (key === 'report') {
+      navigate(`/app/history/${site?.id}`);
+      return;
+    }
+    setActiveForm(key);
+  };
   const [activeCategory, setActiveCategory] = useState<string>('operations');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -366,7 +378,7 @@ export default function ForemanDashboard() {
 
       <AtAGlanceStats siteId={site.id} />
 
-      <TileGrid title={activeCategoryConfig.label} tiles={activeCategoryConfig.tiles} onSelect={setActiveForm} />
+      <TileGrid title={activeCategoryConfig.label} tiles={activeCategoryConfig.tiles} onSelect={handleSelectTile} />
 
       {activeForm === 'attendance' && <AttendanceForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'delivery' && <DeliveryForm siteId={site.id} onClose={() => setActiveForm(null)} />}
@@ -377,7 +389,6 @@ export default function ForemanDashboard() {
       {activeForm === 'inspection' && <InspectionForm siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'permit' && <PermitsView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'defects' && <DefectsView siteId={site.id} onClose={() => setActiveForm(null)} />}
-      {activeForm === 'report' && <SiteReportView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'tools' && <ToolsView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'visitors' && <VisitorLogView siteId={site.id} onClose={() => setActiveForm(null)} />}
       {activeForm === 'certifications' && <CertificationsView siteId={site.id} onClose={() => setActiveForm(null)} readOnly />}

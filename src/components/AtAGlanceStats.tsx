@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,6 @@ import { usePayrollSummary } from '@/hooks/usePayroll';
 import { formatKES } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AtAGlanceDetailView, type AtAGlanceDetailType } from '@/components/forms/AtAGlanceDetailView';
-import { SiteReportView } from '@/components/forms/SiteReportView';
 
 interface AtAGlanceStatsProps {
   siteId: string;
@@ -24,7 +24,7 @@ function today() {
 // History feed's dated-event-log shape.
 export function AtAGlanceStats({ siteId }: AtAGlanceStatsProps) {
   const [openDetail, setOpenDetail] = useState<AtAGlanceDetailType | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const navigate = useNavigate();
   const { data: payroll, isLoading: payrollLoading } = usePayrollSummary(siteId);
   const { data: stats, isLoading } = useQuery({
     queryKey: ['atAGlance', siteId, today()],
@@ -68,7 +68,7 @@ export function AtAGlanceStats({ siteId }: AtAGlanceStatsProps) {
         <p className="text-xs text-muted-foreground tracking-wide uppercase">Today at a glance</p>
         <button
           type="button"
-          onClick={() => setShowHistory(true)}
+          onClick={() => navigate(`/app/history/${siteId}`)}
           className="flex items-center gap-1 text-xs text-primary hover:underline"
         >
           <History className="w-3.5 h-3.5" /> Full history
@@ -110,7 +110,6 @@ export function AtAGlanceStats({ siteId }: AtAGlanceStatsProps) {
       </div>
 
       {openDetail && <AtAGlanceDetailView siteId={siteId} type={openDetail} onClose={() => setOpenDetail(null)} />}
-      {showHistory && <SiteReportView siteId={siteId} onClose={() => setShowHistory(false)} />}
     </div>
   );
 }

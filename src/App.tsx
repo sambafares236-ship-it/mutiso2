@@ -11,6 +11,8 @@ import ResetPassword from './pages/ResetPassword';
 import JoinPage from './pages/JoinPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import SiteHistoryFeed from './pages/SiteHistoryFeed';
+import SiteHistoryEntryDetail from './pages/SiteHistoryEntryDetail';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<Index />} />
+            <Route path="/app/history/:siteId" element={<SiteHistoryFeed />} />
+            <Route path="/app/history/:siteId/entry/:entryId" element={<SiteHistoryEntryDetail />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/join" element={<JoinPage />} />
