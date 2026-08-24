@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FeedPostCard } from '@/components/FeedPostCard';
+import { GroupedFeedCard } from '@/components/GroupedFeedCard';
 
 // Site's `sites` row is RLS-protected by owns_site()/is_assigned_foreman()
 // same as every other site-scoped table, so a plain select here already
@@ -29,7 +30,7 @@ export default function SiteHistoryFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: siteName } = useSiteName(siteId);
-  const { entries, isLoading, isLoadingMore, hasMore, loadMore } = useSiteHistoryFeed(siteId);
+  const { items, isLoading, isLoadingMore, hasMore, loadMore } = useSiteHistoryFeed(siteId);
 
   const goBack = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
@@ -63,21 +64,29 @@ export default function SiteHistoryFeed() {
       <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
-        ) : !entries.length ? (
+        ) : !items.length ? (
           <p className="text-sm text-muted-foreground text-center py-12">No activity recorded yet.</p>
         ) : (
           <>
-            {entries.map((entry) => (
-              <FeedPostCard
-                key={entry.id}
-                entry={entry}
-                onClick={() =>
-                  navigate(
-                    `/app/history/${siteId}/entry/${entry.id}?date=${encodeURIComponent(entry.date)}`,
-                  )
-                }
-              />
-            ))}
+            {items.map((item) =>
+              item.kind === 'group' ? (
+                <GroupedFeedCard
+                  key={`${item.type}-${item.day}`}
+                  group={item}
+                  onClick={() => navigate(`/app/history/${siteId}/group/${item.type}/${item.day}`)}
+                />
+              ) : (
+                <FeedPostCard
+                  key={item.entry.id}
+                  entry={item.entry}
+                  onClick={() =>
+                    navigate(
+                      `/app/history/${siteId}/entry/${item.entry.id}?date=${encodeURIComponent(item.entry.date)}`,
+                    )
+                  }
+                />
+              ),
+            )}
             {hasMore && (
               <div className="pt-2 flex justify-center">
                 <Button variant="outline" onClick={loadMore} disabled={isLoadingMore}>

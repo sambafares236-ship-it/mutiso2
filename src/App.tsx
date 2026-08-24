@@ -13,6 +13,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import SiteHistoryFeed from './pages/SiteHistoryFeed';
 import SiteHistoryEntryDetail from './pages/SiteHistoryEntryDetail';
+import SiteHistoryGroupDetail from './pages/SiteHistoryGroupDetail';
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/app" element={<Index />} />
             <Route path="/app/history/:siteId" element={<SiteHistoryFeed />} />
             <Route path="/app/history/:siteId/entry/:entryId" element={<SiteHistoryEntryDetail />} />
+            <Route path="/app/history/:siteId/group/:type/:day" element={<SiteHistoryGroupDetail />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/join" element={<JoinPage />} />

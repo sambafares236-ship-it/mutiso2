@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSiteReport, type ReportEntry } from '@/hooks/useSiteReport';
+import { useSiteReport } from '@/hooks/useSiteReport';
+import { groupFeedEntries, type FeedItem } from '@/lib/feedGrouping';
 
 const PAGE_SIZE = 20;
 const INITIAL_WINDOW_DAYS = 30;
@@ -36,35 +37,35 @@ export function useSiteHistoryFeed(siteId: string | undefined) {
 
   const { data: entries, isLoading, isFetching } = useSiteReport(siteId, startDate, endDate);
 
-  const sorted = useMemo<ReportEntry[]>(
-    () => [...(entries ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [entries],
-  );
+  // Grouping happens before pagination, not after - so "Load more" always
+  // reveals a consistent number of feed cards regardless of how many raw
+  // records (e.g. a 20-person attendance day) collapsed into one of them.
+  const groupedItems = useMemo<FeedItem[]>(() => groupFeedEntries(entries ?? []), [entries]);
 
   // A widen was in flight and has now resolved - check whether it actually
   // turned up anything new before allowing another one.
   useEffect(() => {
     if (isFetching || pendingWidenFrom.current === null) return;
-    if (sorted.length <= pendingWidenFrom.current) setExhausted(true);
+    if (groupedItems.length <= pendingWidenFrom.current) setExhausted(true);
     pendingWidenFrom.current = null;
-  }, [isFetching, sorted.length]);
+  }, [isFetching, groupedItems.length]);
 
-  const visible = sorted.slice(0, visibleCount);
-  const hasMore = visibleCount < sorted.length || (!exhausted && windowDays < MAX_WINDOW_DAYS);
+  const visible = groupedItems.slice(0, visibleCount);
+  const hasMore = visibleCount < groupedItems.length || (!exhausted && windowDays < MAX_WINDOW_DAYS);
 
   const loadMore = () => {
-    if (visibleCount < sorted.length) {
+    if (visibleCount < groupedItems.length) {
       setVisibleCount((c) => c + PAGE_SIZE);
       return;
     }
     if (exhausted || windowDays >= MAX_WINDOW_DAYS) return;
-    pendingWidenFrom.current = sorted.length;
+    pendingWidenFrom.current = groupedItems.length;
     setWindowDays((d) => Math.min(d + WINDOW_STEP_DAYS, MAX_WINDOW_DAYS));
     setVisibleCount((c) => c + PAGE_SIZE);
   };
 
   return {
-    entries: visible,
+    items: visible,
     isLoading,
     isLoadingMore: isFetching && !isLoading,
     hasMore,
