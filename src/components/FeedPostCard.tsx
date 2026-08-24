@@ -1,22 +1,13 @@
 import { ChevronRight } from 'lucide-react';
 import type { ReportEntry } from '@/hooks/useSiteReport';
 import { TYPE_ICON, TYPE_LABEL, TYPE_COLOR_VAR } from '@/components/CategoryRow';
+import { formatFeedDate } from '@/lib/feedDate';
 
 interface FeedPostCardProps {
   entry: ReportEntry;
   onClick: () => void;
 }
 
-function formatPostDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-KE', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 // One "post" = one log entry, styled like a social feed item: category
 // badge up top (who/what this is), caption text, then photos right
@@ -48,7 +39,7 @@ export function FeedPostCard({ entry, onClick }: FeedPostCardProps) {
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: `hsl(${colorVar})` }}>
               {TYPE_LABEL[entry.type]}
             </p>
-            <p className="text-[11px] text-muted-foreground">{formatPostDate(entry.date)}</p>
+            <p className="text-[11px] text-muted-foreground">{formatFeedDate(entry.date)}</p>
           </div>
         </div>
         {entry.amount && <span className="font-bold text-sm text-foreground flex-shrink-0">{entry.amount}</span>}

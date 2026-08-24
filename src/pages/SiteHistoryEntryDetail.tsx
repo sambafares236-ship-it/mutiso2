@@ -5,6 +5,7 @@ import { useSiteReport } from '@/hooks/useSiteReport';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TYPE_ICON, TYPE_LABEL, TYPE_COLOR_VAR } from '@/components/CategoryRow';
+import { formatFeedDate } from '@/lib/feedDate';
 
 function daysAround(iso: string, pad: number) {
   const base = new Date(iso);
@@ -15,16 +16,6 @@ function daysAround(iso: string, pad: number) {
   return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
 }
 
-function formatFullDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-KE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 // Rather than 12 new per-type single-row queries, this re-runs the same
 // merge-and-sort useSiteReport already uses for the feed, just scoped to a
@@ -92,7 +83,7 @@ export default function SiteHistoryEntryDetail() {
                 <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: `hsl(${colorVar})` }}>
                   {TYPE_LABEL[entry.type]}
                 </p>
-                <p className="text-xs text-muted-foreground">{formatFullDate(entry.date)}</p>
+                <p className="text-xs text-muted-foreground">{formatFeedDate(entry.date, 'long')}</p>
               </div>
             </div>
 
