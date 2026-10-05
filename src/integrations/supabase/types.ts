@@ -1680,6 +1680,7 @@ export type Database = {
           location_recapture_requested_at: string | null
           longitude: number | null
           owner_id: string
+          payroll_cadence: string
           site_name: string
           status: string
           subscription_end: string | null
@@ -1701,6 +1702,7 @@ export type Database = {
           location_recapture_requested_at?: string | null
           longitude?: number | null
           owner_id: string
+          payroll_cadence?: string
           site_name: string
           status?: string
           subscription_end?: string | null
@@ -1722,6 +1724,7 @@ export type Database = {
           location_recapture_requested_at?: string | null
           longitude?: number | null
           owner_id?: string
+          payroll_cadence?: string
           site_name?: string
           status?: string
           subscription_end?: string | null
@@ -2819,6 +2822,13 @@ export type Database = {
       generate_payroll_run: {
         Args: { p_site_id: string; p_week_end: string; p_week_start: string }
         Returns: string
+      }
+      get_ungenerated_payroll_periods: {
+        Args: { p_site_id: string }
+        Returns: {
+          period_start: string
+          period_end: string
+        }[]
       }
       generate_subcontractor_payment: {
         Args: {

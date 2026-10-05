@@ -576,9 +576,16 @@ export function ProjectOverviewView({ siteId, siteName, subscriptionTier, onClos
                   <span className="text-muted-foreground">Budget</span>
                   <span className="font-medium text-foreground">{formatKES(finance?.budgetTotal, finance?.currency)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="text-muted-foreground">Actual to date (labor + other)</span>
-                  <span className="font-medium text-foreground">{formatKES(finance?.actualTotal, finance?.currency)}</span>
+                  <span className="text-right">
+                    <span className="font-medium text-foreground block">{formatKES(finance?.actualTotal, finance?.currency)}</span>
+                    {!!finance?.ungeneratedPayrollPeriodsCount && (
+                      <span className="text-[10px] text-destructive">
+                        {finance.ungeneratedPayrollPeriodsCount} payroll period{finance.ungeneratedPayrollPeriodsCount > 1 ? 's' : ''} not yet generated — not included
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Today's payroll</span>

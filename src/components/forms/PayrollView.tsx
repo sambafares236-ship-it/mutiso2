@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Banknote, X, Plus, Check, Clock, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSite, useUpdateSite } from '@/hooks/useSite';
 import {
   useSitePayrollRuns,
   usePayrollLines,
   useGeneratePayrollRun,
+  useGenerateDailyPayrollRun,
+  useUngeneratedPayrollPeriods,
   useUpdatePayrollLine,
   useMarkPayrollLinePaid,
   usePayrollSummary,
@@ -149,6 +152,109 @@ function PayrollLineRow({
   );
 }
 
+// Lists periods with attendance logged but no payroll_run yet - see
+// get_ungenerated_payroll_periods. A day period (period_start ===
+// period_end) gets the lighter one-click daily generate; a week period
+// uses the same generate flow as "Generate This Week's Payroll". Owner-
+// only, same as every other Generate action - a foreman can see the gap
+// exists via the Finance Summary note but acting on it is a financial
+// decision, not field capture.
+function UngeneratedPayrollReminder({ siteId, onGenerated }: { siteId: string; onGenerated: (runId: string) => void }) {
+  const { isContractor } = useAuth();
+  const { data: periods, isLoading } = useUngeneratedPayrollPeriods(siteId);
+  const generateRun = useGeneratePayrollRun();
+  const generateDaily = useGenerateDailyPayrollRun();
+
+  if (!isContractor || isLoading || !periods?.length) return null;
+
+  const handleGenerate = async (period: { period_start: string; period_end: string }) => {
+    const isDay = period.period_start === period.period_end;
+    try {
+      const runId = isDay
+        ? await generateDaily.mutateAsync({ siteId, date: period.period_start })
+        : await generateRun.mutateAsync({ siteId, weekStart: period.period_start, weekEnd: period.period_end });
+      toast.success('Payroll generated');
+      onGenerated(runId as string);
+    } catch (err) {
+      toast.error('Could not generate payroll', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
+  const pending = generateRun.isPending || generateDaily.isPending;
+
+  return (
+    <div className="card-industrial p-3 mb-4 border-destructive/40">
+      <p className="text-xs font-medium text-destructive uppercase tracking-wide mb-2">
+        {periods.length} payroll period{periods.length > 1 ? 's' : ''} not yet generated
+      </p>
+      <p className="text-[11px] text-muted-foreground mb-3">
+        Attendance is logged for these, but they're not counted in project costs yet.
+      </p>
+      <div className="space-y-2">
+        {periods.map((p) => {
+          const isDay = p.period_start === p.period_end;
+          return (
+            <div key={`${p.period_start}-${p.period_end}`} className="flex items-center justify-between gap-2">
+              <span className="text-sm text-foreground">
+                {isDay ? p.period_start : `${p.period_start} – ${p.period_end}`}
+              </span>
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => handleGenerate(p)}>
+                <Plus className="w-3.5 h-3.5 mr-1" /> Generate
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Owner-only. Weekly stays the default for any site that hasn't changed
+// it - this toggle is additive, not a migration prompt. Switching cadence
+// doesn't touch existing payroll_run rows; it only changes how
+// get_ungenerated_payroll_periods buckets attendance going forward and
+// which Generate flow (daily one-click vs weekly range) the UI defaults
+// to below.
+function PayrollCadenceToggle({ siteId }: { siteId: string }) {
+  const { data: site } = useSite(siteId);
+  const updateSite = useUpdateSite();
+  const cadence = site?.payroll_cadence ?? 'weekly';
+
+  const setCadence = (value: 'daily' | 'weekly') => {
+    if (value === cadence) return;
+    updateSite.mutate(
+      { siteId, updates: { payroll_cadence: value } },
+      {
+        onError: (err) => toast.error('Could not update payroll cadence', { description: err instanceof Error ? err.message : undefined }),
+      },
+    );
+  };
+
+  return (
+    <div className="flex items-center gap-2 mb-4 text-xs">
+      <span className="text-muted-foreground">Generate payroll:</span>
+      <div className="flex rounded-md border border-border overflow-hidden">
+        <button
+          type="button"
+          className={`px-2.5 py-1 ${cadence === 'weekly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+          onClick={() => setCadence('weekly')}
+          disabled={updateSite.isPending}
+        >
+          Weekly
+        </button>
+        <button
+          type="button"
+          className={`px-2.5 py-1 ${cadence === 'daily' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+          onClick={() => setCadence('daily')}
+          disabled={updateSite.isPending}
+        >
+          Daily
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PayrollView({ siteId, onClose }: PayrollViewProps) {
   const { isContractor } = useAuth();
   const { data: runs, isLoading } = useSitePayrollRuns(siteId);
@@ -156,11 +262,12 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const { data: lines, isLoading: linesLoading } = usePayrollLines(selectedRunId ?? undefined);
 
-  // payroll_run has a unique(site_id, week_start) constraint and the RPC
-  // does a plain insert with no ON CONFLICT - clicking Generate again once
-  // a run for the current week already exists throws a raw duplicate-key
-  // error. Detect that case up front and just open the existing run
-  // instead of attempting a second insert.
+  // generate_payroll_run now upserts: if a run already exists for these
+  // dates it recalculates its lines from current attendance instead of
+  // inserting a duplicate (blocked only if a line in it is already paid -
+  // see the migration). Clicking the button when a run exists still just
+  // opens it, to view, rather than recalculating as a side effect of
+  // "View" - recalculating is its own explicit action below.
   const currentWeekRun = runs?.find((r) => r.week_start === mondayOfThisWeek() && r.week_end === sundayOfThisWeek());
   const selectedRun = runs?.find((r) => r.id === selectedRunId);
 
@@ -192,6 +299,20 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
     }
   };
 
+  // Recalculates an already-open run from current attendance - the fix
+  // for generating mid-week and being stuck with a partial total. Blocked
+  // by the RPC (not just this handler) if any line in the run is already
+  // marked paid.
+  const handleRecalculate = async () => {
+    if (!selectedRun) return;
+    try {
+      await generateRun.mutateAsync({ siteId, weekStart: selectedRun.week_start, weekEnd: selectedRun.week_end });
+      toast.success('Payroll recalculated from current attendance');
+    } catch (err) {
+      toast.error('Could not recalculate', { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in">
       <div className="container max-w-lg mx-auto px-4 py-6 h-full overflow-y-auto">
@@ -215,12 +336,20 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
               <Button variant="ghost" size="sm" onClick={() => setSelectedRunId(null)}>
                 &larr; Back to runs
               </Button>
-              {!!lines?.length && (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPayroll}>
-                  <Download className="w-3.5 h-3.5" />
-                  Export CSV
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {isContractor && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={handleRecalculate} disabled={generateRun.isPending}>
+                    <Banknote className="w-3.5 h-3.5" />
+                    Recalculate
+                  </Button>
+                )}
+                {!!lines?.length && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPayroll}>
+                    <Download className="w-3.5 h-3.5" />
+                    Export CSV
+                  </Button>
+                )}
+              </div>
             </div>
             {linesLoading ? (
               <Skeleton className="h-24 w-full rounded-xl" />
@@ -236,6 +365,9 @@ export function PayrollView({ siteId, onClose }: PayrollViewProps) {
           </div>
         ) : (
           <>
+            {isContractor && <PayrollCadenceToggle siteId={siteId} />}
+            <UngeneratedPayrollReminder siteId={siteId} onGenerated={setSelectedRunId} />
+
             {(currentWeekRun || isContractor) && (
               <Button variant="outline" size="sm" className="mb-4" onClick={handleGenerateOrView} disabled={generateRun.isPending}>
                 {currentWeekRun ? (

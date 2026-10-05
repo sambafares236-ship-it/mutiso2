@@ -131,10 +131,11 @@ export function useUpdateSite() {
       const { error } = await supabase.from('sites').update(updates).eq('id', siteId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminSites'] });
       queryClient.invalidateQueries({ queryKey: ['allSites'] });
       queryClient.invalidateQueries({ queryKey: ['foremanSite'] });
+      queryClient.invalidateQueries({ queryKey: ['site', variables.siteId] });
     },
   });
 }

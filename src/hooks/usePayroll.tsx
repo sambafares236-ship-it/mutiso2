@@ -157,6 +157,57 @@ export function useGeneratePayrollRun() {
       queryClient.invalidateQueries({ queryKey: ['payrollRuns'] });
       queryClient.invalidateQueries({ queryKey: ['financeSummary', variables.siteId] });
       queryClient.invalidateQueries({ queryKey: ['payrollSummary', variables.siteId] });
+      queryClient.invalidateQueries({ queryKey: ['ungeneratedPayrollPeriods', variables.siteId] });
+    },
+  });
+}
+
+export interface UngeneratedPeriod {
+  period_start: string;
+  period_end: string;
+}
+
+// Periods (days or weeks, per sites.payroll_cadence) with attendance
+// logged but no payroll_run yet. Drives the "Generate" reminder on the
+// Payroll and Budget screens - see get_ungenerated_payroll_periods in
+// 20260930090000_payroll_cadence_and_recalculate.sql. A day period has
+// period_start === period_end; the UI uses that to pick the daily
+// one-click label vs the weekly range label.
+export function useUngeneratedPayrollPeriods(siteId: string | undefined) {
+  return useQuery({
+    queryKey: ['ungeneratedPayrollPeriods', siteId],
+    queryFn: async (): Promise<UngeneratedPeriod[]> => {
+      if (!siteId) return [];
+      const { data, error } = await supabase.rpc('get_ungenerated_payroll_periods', { p_site_id: siteId });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!siteId,
+  });
+}
+
+// One-click variant for daily cadence: generates (or recalculates) a
+// single-day run without the contractor having to pick a date range -
+// same RPC as useGeneratePayrollRun, just always period_start ===
+// period_end === the given date.
+export function useGenerateDailyPayrollRun() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ siteId, date }: { siteId: string; date: string }) => {
+      const { data, error } = await supabase.rpc('generate_payroll_run', {
+        p_site_id: siteId,
+        p_week_start: date,
+        p_week_end: date,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['payrollRuns'] });
+      queryClient.invalidateQueries({ queryKey: ['financeSummary', variables.siteId] });
+      queryClient.invalidateQueries({ queryKey: ['payrollSummary', variables.siteId] });
+      queryClient.invalidateQueries({ queryKey: ['ungeneratedPayrollPeriods', variables.siteId] });
     },
   });
 }
