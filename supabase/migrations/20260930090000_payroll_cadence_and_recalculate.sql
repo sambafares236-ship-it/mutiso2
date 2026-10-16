@@ -36,9 +36,9 @@ alter table public.payroll_run
   add constraint payroll_run_site_id_period_key unique (site_id, week_start, week_end);
 
 -- 3. generate_payroll_run: allow recalculating an existing run instead of
--- only ever inserting a brand-new one. Upserts the run row, then replaces
--- its lines (delete + reinsert in the same statement set) so a regenerate
--- reflects the full, current attendance for that period. Paid lines block
+-- only ever inserting a brand-new one. Creates the run if needed, then
+-- upserts its lines so a regenerate reflects the full, current attendance
+-- for that period without losing advances/deductions already entered. Paid lines block
 -- the recalculate - paying someone is a real-world event that shouldn't be
 -- silently undone by a recalculation; the caller has to resolve that first
 -- (see mark_payroll_line_paid / the manual-unblock note in ISSUES.md).
@@ -78,13 +78,17 @@ begin
       raise exception 'Cannot recalculate: % line(s) in this period are already marked paid', v_paid_count;
     end if;
 
-    delete from public.payroll_line where payroll_run_id = v_run_id;
   else
     insert into public.payroll_run (site_id, week_start, week_end, created_by)
     values (p_site_id, p_week_start, p_week_end, v_user_id)
     returning id into v_run_id;
   end if;
 
+  -- Upsert rather than delete + reinsert: on a recalculate, lines already
+  -- exist and may carry advances/deductions the owner entered. Only
+  -- days_present and the amounts derived from it are refreshed; the
+  -- line's own daily_rate, advances and deductions are kept, and
+  -- net_amount is recomputed as gross - advances - deductions.
   insert into public.payroll_line (payroll_run_id, worker_id, days_present, daily_rate, gross_amount, net_amount)
   select
     v_run_id,
@@ -96,7 +100,12 @@ begin
   from public.workers_master w
   join public.attendance_log a on a.worker_id = w.id and a.date between p_week_start and p_week_end
   where w.site_id = p_site_id
-  group by w.id, w.daily_rate;
+  group by w.id, w.daily_rate
+  on conflict (payroll_run_id, worker_id) do update
+    set days_present = excluded.days_present,
+        gross_amount = excluded.days_present * payroll_line.daily_rate,
+        net_amount = excluded.days_present * payroll_line.daily_rate
+                     - payroll_line.advances - payroll_line.deductions;
 
   return v_run_id;
 end;
@@ -161,6 +170,6 @@ $$;
 grant execute on function public.get_ungenerated_payroll_periods(uuid) to authenticated;
 
 comment on function public.generate_payroll_run is
-  'Creates or recalculates a payroll run for a period. Recalculating replaces unpaid lines with current attendance; blocks if any line in the run is already paid.';
+  'Creates or recalculates a payroll run for a period. Recalculating refreshes days/gross/net from current attendance, keeping advances and deductions; blocks if any line in the run is already paid.';
 comment on function public.get_ungenerated_payroll_periods is
   'Periods (days or weeks, per sites.payroll_cadence) with attendance logged but no payroll_run yet - drives the Budget/Payroll "Generate" reminder.';
