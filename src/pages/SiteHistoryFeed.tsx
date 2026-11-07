@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, History, Loader2 } from 'lucide-react';
+import { ArrowLeft, History } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useSiteHistoryFeed } from '@/hooks/useSiteHistoryFeed';
+import { useSiteHistoryFeed, type HistoryTypeFilter } from '@/hooks/useSiteHistoryFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FeedPostCard } from '@/components/FeedPostCard';
 import { GroupedFeedCard } from '@/components/GroupedFeedCard';
-import { ExportPanel } from '@/components/ExportPanel';
+import { HistoryFilterBar } from '@/components/HistoryFilterBar';
+import { addDays, resolvePeriod, today, type PeriodPreset } from '@/lib/historyPeriod';
 
 // Site's `sites` row is RLS-protected by owns_site()/is_assigned_foreman()
 // same as every other site-scoped table, so a plain select here already
@@ -32,8 +33,16 @@ export default function SiteHistoryFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: siteName } = useSiteName(siteId);
-  const { items, isLoading, isLoadingMore, hasMore, loadMore } = useSiteHistoryFeed(siteId);
-  const [showExport, setShowExport] = useState(false);
+  const [type, setType] = useState<HistoryTypeFilter>('all');
+  const [preset, setPreset] = useState<PeriodPreset>('last30');
+  const [customStart, setCustomStart] = useState(() => addDays(today(), -6));
+  const [customEnd, setCustomEnd] = useState(() => today());
+  const range = useMemo(() => resolvePeriod(preset, customStart, customEnd), [preset, customStart, customEnd]);
+  const { items, totalCount, isLoading, isRefetching, hasMore, loadMore } = useSiteHistoryFeed(siteId, {
+    startDate: range.startDate,
+    endDate: range.endDate,
+    type,
+  });
 
   const goBack = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
@@ -61,17 +70,33 @@ export default function SiteHistoryFeed() {
             <h1 className="font-display text-xl text-primary leading-tight">SITE HISTORY</h1>
             {siteName && <p className="text-xs text-muted-foreground truncate">{siteName}</p>}
           </div>
-          <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setShowExport(true)} aria-label="Export CSV">
-            <Download className="w-5 h-5 text-muted-foreground" />
-          </Button>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
+      <div className="max-w-lg mx-auto px-4 pt-4">
+        {siteId && (
+          <HistoryFilterBar
+            siteId={siteId}
+            type={type}
+            onTypeChange={setType}
+            preset={preset}
+            onPresetChange={setPreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onCustomStartChange={setCustomStart}
+            onCustomEndChange={setCustomEnd}
+            range={range}
+            totalCount={totalCount}
+            isLoading={isLoading}
+          />
+        )}
+      </div>
+
+      <div className={`max-w-lg mx-auto px-4 py-4 space-y-3 transition-opacity ${isRefetching ? 'opacity-60' : ''}`}>
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
         ) : !items.length ? (
-          <p className="text-sm text-muted-foreground text-center py-12">No activity recorded yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-12">No activity recorded for this period.</p>
         ) : (
           <>
             {items.map((item) =>
@@ -95,8 +120,7 @@ export default function SiteHistoryFeed() {
             )}
             {hasMore && (
               <div className="pt-2 flex justify-center">
-                <Button variant="outline" onClick={loadMore} disabled={isLoadingMore}>
-                  {isLoadingMore && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Button variant="outline" onClick={loadMore}>
                   Load more
                 </Button>
               </div>
@@ -104,8 +128,6 @@ export default function SiteHistoryFeed() {
           </>
         )}
       </div>
-
-      {showExport && siteId && <ExportPanel siteId={siteId} onClose={() => setShowExport(false)} />}
     </div>
   );
 }

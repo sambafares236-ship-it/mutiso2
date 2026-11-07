@@ -9,6 +9,12 @@
 
 ## Open
 
+- **Site History feed can silently truncate busy periods at 1000 rows per table**
+  - Area/files: `src/hooks/useSiteReport.tsx` (13 unpaged queries feeding the History feed and group counts)
+  - Details: PostgREST caps a single response at the project's max-rows setting (1000 by default), and `useSiteReport` doesn't page. A busy site (e.g. 20 workers x 60+ days of attendance) can exceed that in one table, so the feed and its grouped counts ("18 people marked present") could be incomplete with no error. The CSV exports in `src/lib/csvExports.ts` now page through results, so downloads are complete even when the on-screen feed is not.
+  - Proposed fix: page each query in `useSiteReport` with `.range()`, same as `fetchAllPages` in `csvExports.ts`, or move the merge server-side.
+  - Status: Open - not yet built
+
 - **Photo uploads (site, diary, receipt) send the raw camera file — slow on-site, and not offline-queueable**
   - Area/files: `src/hooks/usePhotos.tsx` (`useUploadPhoto`), `src/components/forms/DeliveryForm.tsx` (receipt photo upload) — no compression/resize logic exists anywhere in the codebase today
   - Details: Every photo path uploads `file` straight from the device input with no client-side processing. Modern phone cameras routinely produce 3-8MB+ per shot; on typical on-site mobile data that makes uploads feel stalled, and there's no visible progress or graceful retry — reported directly as "takes long to upload images." Compounding this: photo upload was deliberately left out of the offline-sync queue (see the comment in `usePhotos.tsx`) because a multi-megabyte file doesn't reasonably fit in the same IndexedDB queue used for attendance/materials/diary JSON payloads. So on bad signal, a photo upload doesn't degrade gracefully — it just fails or hangs, unlike every other Stage 2 form.

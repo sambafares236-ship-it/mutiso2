@@ -8,20 +8,43 @@ type ActualCostRow = Database['public']['Tables']['actual_cost']['Row'];
 type PaymentCertificateRow = Database['public']['Tables']['payment_certificate']['Row'];
 type PettyCashRow = Database['public']['Tables']['petty_cash_log']['Row'];
 
+// PostgREST silently caps a single response at the project's max-rows
+// setting (1000 by default), so an unpaged export of a busy site - e.g.
+// 20 workers x 60 days of attendance - would download a truncated file
+// with no error. Page through with .range() until a short page comes back.
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+  }
+  return all;
+}
+
 // One export function per report domain. Each does its own raw table
 // fetch (rather than reusing useSiteReport's composed-title feed) so the
 // CSV can carry full, separately-sortable columns - e.g. Worker Name and
 // Trade as distinct fields, not folded into one display string.
 
 export async function exportAttendanceCsv(siteId: string, startDate: string, endDate: string) {
-  const { data, error } = await supabase
-    .from('attendance_log')
-    .select('date, marked_by, worker:workers_master(full_name, trade)')
-    .eq('site_id', siteId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date');
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from('attendance_log')
+      .select('date, marked_by, worker:workers_master(full_name, trade)')
+      .eq('site_id', siteId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date')
+      .order('id')
+      .range(from, to),
+  );
 
   const names = await resolveProfileNames((data ?? []).map((r) => r.marked_by));
 
@@ -37,14 +60,17 @@ export async function exportAttendanceCsv(siteId: string, startDate: string, end
 }
 
 export async function exportMaterialsDeliveredCsv(siteId: string, startDate: string, endDate: string) {
-  const { data, error } = await supabase
-    .from('materials_delivered')
-    .select('date, material_name, quantity, unit, supplier, created_by')
-    .eq('site_id', siteId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date');
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from('materials_delivered')
+      .select('date, material_name, quantity, unit, supplier, created_by')
+      .eq('site_id', siteId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date')
+      .order('id')
+      .range(from, to),
+  );
 
   const names = await resolveProfileNames((data ?? []).map((r) => r.created_by));
 
@@ -62,14 +88,17 @@ export async function exportMaterialsDeliveredCsv(siteId: string, startDate: str
 }
 
 export async function exportMaterialsUsedCsv(siteId: string, startDate: string, endDate: string) {
-  const { data, error } = await supabase
-    .from('material_usage_log')
-    .select('date, material_name, quantity, unit, description, created_by')
-    .eq('site_id', siteId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date');
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from('material_usage_log')
+      .select('date, material_name, quantity, unit, description, created_by')
+      .eq('site_id', siteId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date')
+      .order('id')
+      .range(from, to),
+  );
 
   const names = await resolveProfileNames((data ?? []).map((r) => r.created_by));
 
@@ -204,14 +233,17 @@ export async function exportMaterialInventoryCsv(siteId: string) {
 }
 
 export async function exportSiteDiaryCsv(siteId: string, startDate: string, endDate: string) {
-  const { data, error } = await supabase
-    .from('site_diary_log')
-    .select('date, category, title, description, created_by, activity:activity(name)')
-    .eq('site_id', siteId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date');
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from('site_diary_log')
+      .select('date, category, title, description, created_by, activity:activity(name)')
+      .eq('site_id', siteId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date')
+      .order('id')
+      .range(from, to),
+  );
 
   const names = await resolveProfileNames((data ?? []).map((r) => r.created_by));
 
@@ -224,6 +256,147 @@ export async function exportSiteDiaryCsv(siteId: string, startDate: string, endD
       { label: 'Description', value: (r) => r.description },
       { label: 'Linked Activity', value: (r) => r.activity?.name },
       { label: 'Logged By', value: (r) => names.get(r.created_by) },
+    ]),
+  );
+}
+
+export type HistoryExportType = 'attendance' | 'delivery' | 'usage' | 'diary';
+
+interface HistoryRow {
+  date: string;
+  type: string;
+  item: string | null;
+  quantity: number | string | null;
+  unit: string | null;
+  details: string | null;
+  by: string | null;
+}
+
+// One combined CSV for Site History's "All" view - attendance, materials
+// delivered/used and diary entries merged into a single date-sorted sheet
+// with a Type column. (The feed itself also shows visitors, incidents,
+// inspections etc.; those aren't part of this download.) Single-type
+// downloads use the dedicated exporters above, which carry richer columns.
+export async function exportSiteHistoryCsv(
+  siteId: string,
+  startDate: string,
+  endDate: string,
+  types: HistoryExportType[] = ['attendance', 'delivery', 'usage', 'diary'],
+) {
+  const want = new Set(types);
+  const empty = Promise.resolve([] as never[]);
+
+  const [attendance, delivered, used, diary] = await Promise.all([
+    want.has('attendance')
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from('attendance_log')
+            .select('date, marked_by, worker:workers_master(full_name, trade)')
+            .eq('site_id', siteId)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date')
+            .order('id')
+            .range(from, to),
+        )
+      : empty,
+    want.has('delivery')
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from('materials_delivered')
+            .select('date, material_name, quantity, unit, supplier, created_by')
+            .eq('site_id', siteId)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date')
+            .order('id')
+            .range(from, to),
+        )
+      : empty,
+    want.has('usage')
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from('material_usage_log')
+            .select('date, material_name, quantity, unit, description, created_by')
+            .eq('site_id', siteId)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date')
+            .order('id')
+            .range(from, to),
+        )
+      : empty,
+    want.has('diary')
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from('site_diary_log')
+            .select('date, category, title, description, created_by')
+            .eq('site_id', siteId)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date')
+            .order('id')
+            .range(from, to),
+        )
+      : empty,
+  ]);
+
+  const names = await resolveProfileNames([
+    ...attendance.map((r) => r.marked_by),
+    ...delivered.map((r) => r.created_by),
+    ...used.map((r) => r.created_by),
+    ...diary.map((r) => r.created_by),
+  ]);
+
+  const rows: HistoryRow[] = [
+    ...attendance.map((r) => ({
+      date: r.date,
+      type: 'Attendance',
+      item: r.worker?.full_name ?? null,
+      quantity: null,
+      unit: null,
+      details: r.worker?.trade ?? null,
+      by: names.get(r.marked_by) ?? null,
+    })),
+    ...delivered.map((r) => ({
+      date: r.date,
+      type: 'Material delivered',
+      item: r.material_name,
+      quantity: r.quantity,
+      unit: r.unit,
+      details: r.supplier ? `Supplier: ${r.supplier}` : null,
+      by: names.get(r.created_by) ?? null,
+    })),
+    ...used.map((r) => ({
+      date: r.date,
+      type: 'Material used',
+      item: r.material_name,
+      quantity: r.quantity,
+      unit: r.unit,
+      details: r.description,
+      by: names.get(r.created_by) ?? null,
+    })),
+    ...diary.map((r) => ({
+      date: r.date,
+      type: 'Diary',
+      item: r.title,
+      quantity: null,
+      unit: null,
+      details: [r.category, r.description].filter(Boolean).join(': ') || null,
+      by: names.get(r.created_by) ?? null,
+    })),
+  ].sort((a, b) => (a.date === b.date ? a.type.localeCompare(b.type) : a.date.localeCompare(b.date)));
+
+  downloadCsv(
+    `site-history-${siteId}-${startDate}-to-${endDate}`,
+    rowsToCsv(rows, [
+      { label: 'Date', value: (r) => r.date },
+      { label: 'Type', value: (r) => r.type },
+      { label: 'Item / Person', value: (r) => r.item },
+      { label: 'Quantity', value: (r) => r.quantity },
+      { label: 'Unit', value: (r) => r.unit },
+      { label: 'Details', value: (r) => r.details },
+      { label: 'Logged By', value: (r) => r.by },
     ]),
   );
 }
